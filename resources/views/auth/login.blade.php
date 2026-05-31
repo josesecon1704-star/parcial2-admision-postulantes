@@ -84,8 +84,8 @@
                 'Accept': 'application/json'
             },
             body: JSON.stringify({
-                email: emailValue,
-                password: passwordValue
+                txt_email: emailValue,
+                txt_password: passwordValue
             })
         });
 
