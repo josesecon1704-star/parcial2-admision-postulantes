@@ -31,8 +31,8 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $resultado = $this->authService->login(
-            $request->email,
-            $request->password
+            $request->txt_email,
+            $request->txt_password
         );
 
         if (! $resultado) {
