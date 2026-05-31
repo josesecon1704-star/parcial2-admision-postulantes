@@ -1,0 +1,227 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+// ============================================================
+// DESTINO: app/Http/Controllers/Api/V1/PostulanteController.php
+//
+// CU-06  POST   /api/v1/postulantes          → store   (registrar)
+// CU-07  PUT    /api/v1/postulantes/{id}      → update  (modificar)
+// CU-08  DELETE /api/v1/postulantes/{id}      → destroy (eliminar)
+// CU-09  GET    /api/v1/postulantes/buscar    → buscar  (búsqueda)
+// CU-10  GET    /api/v1/postulantes           → index   (listar)
+//         GET    /api/v1/postulantes/{id}      → show    (ver uno)
+// ============================================================
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StorePostulanteRequest;
+use App\Http\Requests\UpdatePostulanteRequest;
+use App\Models\Postulante;
+use App\Services\PostulanteService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class PostulanteController extends Controller
+{
+    public function __construct(
+        private readonly PostulanteService $service
+    ) {}
+
+    // ──────────────────────────────────────────────────────
+    // CU-10: Listar postulantes
+    // GET /api/v1/postulantes
+    // Query: ?buscar=texto  ?ciudad=LaPaz  ?sexo=M  ?per_page=15
+    // ──────────────────────────────────────────────────────
+    public function index(Request $request): JsonResponse
+    {
+        $postulantes = $this->service->listar(
+            filtros: $request->only(['buscar', 'ciudad', 'sexo']),
+            perPage: (int) $request->get('per_page', 15),
+        );
+
+        
+
+        return response()->json([
+            'success' => true,
+            'data'    => $postulantes->through(
+                fn($p) => $this->service->formatear($p)
+            ),
+        ], 200);
+    }
+
+    // ──────────────────────────────────────────────────────
+    // CU-09: Buscar postulante
+    // GET /api/v1/postulantes/buscar?q=texto
+    // Busca por CI, nombre o correo — respuesta rápida sin paginar
+    // IMPORTANTE: esta ruta debe ir ANTES de show() en api.php
+    // ──────────────────────────────────────────────────────
+    public function buscar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'q' => ['required', 'string', 'min:2'],
+        ]);
+
+        $termino = $request->q;
+
+        $postulantes = Postulante::where('txt_ci',     'ilike', "%{$termino}%")
+            ->orWhere('txt_nombre', 'ilike', "%{$termino}%")
+            ->orWhere('txt_correo', 'ilike', "%{$termino}%")
+            ->orderBy('txt_nombre')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'success'   => true,
+            'total'     => $postulantes->count(),
+            'data'      => $postulantes->map(
+                fn($p) => $this->service->formatear($p)
+            ),
+        ], 200);
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Ver detalle de un postulante con sus relaciones
+    // GET /api/v1/postulantes/{id}
+    // ──────────────────────────────────────────────────────
+    public function show(int $id): JsonResponse
+    {
+        $postulante = Postulante::find($id);
+
+        if (! $postulante) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Postulante no encontrado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $this->service->formatear($postulante, conRelaciones: true),
+        ], 200);
+    }
+
+    // ──────────────────────────────────────────────────────
+    // CU-06: Registrar postulante
+    // POST /api/v1/postulantes
+    // El trigger trg_auditar_postulantes registra el INSERT
+    // automáticamente en tbl_auditoria (no hay que hacerlo manual)
+    // ──────────────────────────────────────────────────────
+    public function store(StorePostulanteRequest $request): JsonResponse
+    {
+        $postulante = $this->service->crear($request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Postulante registrado correctamente.',
+            'data'    => $this->service->formatear($postulante),
+        ], 201);
+    }
+
+    // ──────────────────────────────────────────────────────
+    // CU-07: Modificar datos del postulante
+    // PUT /api/v1/postulantes/{id}
+    // El trigger trg_auditar_postulantes registra el UPDATE
+    // automáticamente en tbl_auditoria
+    // ──────────────────────────────────────────────────────
+    public function update(UpdatePostulanteRequest $request, int $id): JsonResponse
+    {
+        $postulante = Postulante::find($id);
+
+        if (! $postulante) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Postulante no encontrado.',
+            ], 404);
+        }
+
+        $actualizado = $this->service->actualizar(
+            $postulante,
+            $request->validated()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Datos del postulante actualizados correctamente.',
+            'data'    => $this->service->formatear($actualizado),
+        ], 200);
+    }
+
+    // ──────────────────────────────────────────────────────
+    // CU-08: Eliminar registro de postulante
+    // DELETE /api/v1/postulantes/{id}
+    // Eliminación FÍSICA — el trigger registra el DELETE en auditoria
+    // Se bloquea si tiene inscripciones activas
+    // ──────────────────────────────────────────────────────
+    public function destroy(int $id): JsonResponse
+    {
+        $postulante = Postulante::find($id);
+
+        if (! $postulante) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Postulante no encontrado.',
+            ], 404);
+        }
+
+        try {
+            $this->service->eliminar($postulante);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Postulante '{$postulante->txt_nombre}' eliminado correctamente.",
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 409); // 409 Conflict — no se puede eliminar por dependencias
+        }
+    }
+    public function formatear(Postulante $postulante, bool $conRelaciones = false): array
+    {
+        $inscripcion = $postulante->inscripciones()
+            ->with('carreras')
+            ->latest('fch_inscripcion')
+            ->first();
+
+        // 1. Construimos el array con todos los datos
+        $data = [
+            'id_postulante'  => $postulante->id_postulante,
+            'txt_ci'         => $postulante->txt_ci,
+            'txt_nombre'     => $postulante->txt_nombre,
+            'txt_telefono'   => $postulante->txt_telefono,
+            'txt_correo'     => $postulante->txt_correo,
+            'fch_nacimiento' => $postulante->fch_nacimiento?->format('Y-m-d'),
+            'edad'           => $postulante->edad,
+            'chr_sexo'       => $postulante->chr_sexo,
+            'sexo_label'     => match($postulante->chr_sexo) {
+                'M' => 'Masculino',
+                'F' => 'Femenino',
+                'X' => 'Otro',
+                default => '-'
+            },
+            'txt_direccion'  => $postulante->txt_direccion,
+            'txt_colegio'    => $postulante->txt_colegio,
+            'txt_ciudad'     => $postulante->txt_ciudad,
+            // Usamos la lógica segura que tenías para las carreras
+            'carrera_1'      => $inscripcion?->carreras->firstWhere('pivot.int_prioridad', 1)?->txt_nombre ?? 'N/A',
+            'carrera_2'      => $inscripcion?->carreras->firstWhere('pivot.int_prioridad', 2)?->txt_nombre ?? '-',
+        ];
+
+        // 2. Si se piden relaciones, agregamos el extra
+        if ($conRelaciones) {
+            $postulante->loadCount('requisitos');
+            $data['requisitos_entregados'] = $postulante->requisitos_count;
+
+            $data['ultima_inscripcion'] = $inscripcion ? [
+                'id_inscripcion'         => $inscripcion->id_inscripcion,
+                'txt_estado_inscripcion' => $inscripcion->txt_estado_inscripcion,
+                'fch_inscripcion'        => $inscripcion->fch_inscripcion,
+            ] : null;
+        }
+
+        // 3. RETORNA EL ARRAY COMPLETO
+        return $data;
+    }
+}
