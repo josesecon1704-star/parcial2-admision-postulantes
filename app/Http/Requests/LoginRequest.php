@@ -19,18 +19,18 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email'    => ['required', 'email'],
-            'password' => ['required', 'string', 'min:6'],
+            'txt_email'    => ['required', 'email'],
+            'txt_password' => ['required', 'string', 'min:6'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'email.required'    => 'El correo electrónico es obligatorio.',
-            'email.email'       => 'El formato del correo no es válido.',
-            'password.required' => 'La contraseña es obligatoria.',
-            'password.min'      => 'La contraseña debe tener al menos 6 caracteres.',
+            'txt_email.required'    => 'El correo electrónico es obligatorio.',
+            'txt_email.email'       => 'El formato del correo no es válido.',
+            'txt_password.required' => 'La contraseña es obligatoria.',
+            'txt_password.min'      => 'La contraseña debe tener al menos 6 caracteres.',
         ];
     }
 
