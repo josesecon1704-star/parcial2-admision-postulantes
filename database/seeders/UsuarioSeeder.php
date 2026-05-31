@@ -48,7 +48,7 @@ class UsuarioSeeder extends Seeder
                 'fch_creacion' => now(),
             ],
             [
-                'id_rol'       => $roles['COORDINADOR'],
+                'id_rol'       => $roles['SECRETARIA'],
                 'txt_username' => 'sec.rojas',
                 'txt_email'    => 'lrojas@ficct.edu.bo',
                 'txt_password' => Hash::make('Coord123!'),
@@ -56,7 +56,7 @@ class UsuarioSeeder extends Seeder
                 'fch_creacion' => now(),
             ],
             [
-                'id_rol'       => $roles['OPERADOR'],
+                'id_rol'       => $roles['DIRECTOR'],
                 'txt_username' => 'dir.flores',
                 'txt_email'    => 'cflores@ficct.edu.bo',
                 'txt_password' => Hash::make('Operador123!'),
