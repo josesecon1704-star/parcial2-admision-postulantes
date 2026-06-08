@@ -1357,7 +1357,17 @@
     // ─────────────────────────────────────────────────────────
     // CONFIGURACIÓN GLOBAL
     // ─────────────────────────────────────────────────────────
-    const API_BASE_URL = 'http://localhost:8000';
+    // Detecta automáticamente la URL del API según el entorno
+    // - En local: usa localhost:8000
+    // - En Railway/producción: usa la misma URL del frontend (mismo dominio)
+    const API_BASE_URL = (() => {
+        const host = window.location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1') {
+            return 'http://localhost:8000';
+        }
+        // En producción el frontend y el API están en el mismo servidor Laravel
+        return window.location.origin;
+    })();
 
     const PAGE_TITLES = {
         dashboard:         'Escritorio de Control',
