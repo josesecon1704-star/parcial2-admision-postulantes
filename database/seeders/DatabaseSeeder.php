@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('══════════════════════════════════════');
 
         $this->call([
+            PoblacionSeeder::class,
             RolSeeder::class,       // tbl_rol
             UsuarioSeeder::class,   // tbl_usuario
             //CatalogoSeeder::class,  // tbl_turno, tbl_aula, tbl_materia, tbl_carrera, tbl_gestion, tbl_requisito
