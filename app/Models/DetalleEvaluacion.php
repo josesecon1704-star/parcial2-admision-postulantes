@@ -22,17 +22,11 @@ class DetalleEvaluacion extends Model
     protected $fillable = [
         'id_evaluacion',
         'id_materia',
-        'num_nota_1',  // Examen 1 — entre 0 y 100
-        'num_nota_2',  // Examen 2 — entre 0 y 100
-        'num_nota_3',  // Examen 3 — entre 0 y 100
-        // num_promedio_materia → NO va aquí, es GENERATED ALWAYS en PostgreSQL
+        'num_nota',  // Una sola nota por materia por examen (0-100)
     ];
 
     protected $casts = [
-        'num_nota_1'           => 'decimal:2',
-        'num_nota_2'           => 'decimal:2',
-        'num_nota_3'           => 'decimal:2',
-        'num_promedio_materia' => 'decimal:2',
+        'num_nota' => 'decimal:2',
     ];
 
     public function evaluacion(): BelongsTo

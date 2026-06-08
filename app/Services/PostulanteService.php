@@ -29,8 +29,8 @@ class PostulanteService
             $b = $filtros['buscar'];
             $query->where(function ($q) use ($b) {
                 $q->where('txt_ci',     'ilike', "%{$b}%")
-                  ->orWhere('txt_nombre','ilike', "%{$b}%")
-                  ->orWhere('txt_correo','ilike', "%{$b}%");
+                    ->orWhere('txt_nombre', 'ilike', "%{$b}%")
+                    ->orWhere('txt_correo', 'ilike', "%{$b}%");
             });
         }
 
@@ -95,26 +95,58 @@ class PostulanteService
     /**
      * Formatear un postulante para la respuesta JSON
      */
-    public function formatear(Postulante $postulante): array
-{
-    // Buscamos la última inscripción y cargamos las carreras de una vez
-    $inscripcion = $postulante->inscripciones()
-        ->with('carreras')
-        ->latest('fch_inscripcion')
-        ->first();
+    public function formatear(Postulante $postulante, bool $conRelaciones = false): array
+    {
+        // Buscamos la última inscripción y cargamos las carreras de una vez
+        $inscripcion = $postulante->inscripciones()
+            ->with('carreras')
+            ->latest('fch_inscripcion')
+            ->first();
 
-    // Filtramos las carreras por prioridad usando el pivot
-    $carrera1 = $inscripcion ? $inscripcion->carreras->firstWhere('pivot.int_prioridad', 1) : null;
-    $carrera2 = $inscripcion ? $inscripcion->carreras->firstWhere('pivot.int_prioridad', 2) : null;
+        // Filtramos las carreras por prioridad usando el pivot
+        $carrera1 = $inscripcion ? $inscripcion->carreras->firstWhere('pivot.int_prioridad', 1) : null;
+        $carrera2 = $inscripcion ? $inscripcion->carreras->firstWhere('pivot.int_prioridad', 2) : null;
 
-    return [
-        'id_postulante' => $postulante->id_postulante,
-        'txt_nombre'    => $postulante->txt_nombre,
-        'txt_ci'        => $postulante->txt_ci,
-        'carrera_1'     => $carrera1 ? $carrera1->txt_nombre : 'N/A',
-        'carrera_2'     => $carrera2 ? $carrera2->txt_nombre : '-',
-    ];
-}
+        $data = [
+            // ── tbl_postulante — todos los campos ──────────────────────
+            'id_postulante'  => $postulante->id_postulante,
+            'txt_ci'         => $postulante->txt_ci,
+            'txt_nombre'     => $postulante->txt_nombre,
+            'txt_correo'     => $postulante->txt_correo,
+            'txt_telefono'   => $postulante->txt_telefono,
+            'fch_nacimiento' => $postulante->fch_nacimiento?->format('Y-m-d'),
+            'chr_sexo'       => $postulante->chr_sexo,
+            'txt_direccion'  => $postulante->txt_direccion,
+            'txt_colegio'    => $postulante->txt_colegio,
+            'txt_ciudad'     => $postulante->txt_ciudad,
+            // ── Carreras (de tbl_inscripcion_carrera) ──────────────────
+            'carrera_1'      => $carrera1?->txt_nombre ?? 'N/A',
+            'carrera_2'      => $carrera2?->txt_nombre ?? '-',
+            // ── Grupo (tbl_grupo via tbl_inscripcion) ──────────────────
+            'grupo'          => $inscripcion?->grupo ? [
+                'id_grupo'   => $inscripcion->grupo->id_grupo,
+                'txt_nombre' => $inscripcion->grupo->txt_nombre,
+            ] : null,
+            // ── Gestión (tbl_gestion via tbl_inscripcion) ──────────────
+            'gestion'        => $inscripcion?->gestion ? [
+                'id_gestion'  => $inscripcion->gestion->id_gestion,
+                'int_año'     => $inscripcion->gestion->int_año,
+                'txt_periodo' => $inscripcion->gestion->txt_periodo,
+            ] : null,
+        ];
 
+        // Relaciones opcionales (solo cuando show() pasa conRelaciones: true)
+        if ($conRelaciones) {
+            $postulante->loadCount('requisitos');
+            $data['requisitos_entregados'] = $postulante->requisitos_count;
 
+            $data['ultima_inscripcion'] = $inscripcion ? [
+                'id_inscripcion'         => $inscripcion->id_inscripcion,
+                'txt_estado_inscripcion' => $inscripcion->txt_estado_inscripcion,
+                'fch_inscripcion'        => $inscripcion->fch_inscripcion,
+            ] : null;
+        }
+
+        return $data;
+    }
 }

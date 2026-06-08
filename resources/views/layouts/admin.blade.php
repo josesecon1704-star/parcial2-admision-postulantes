@@ -29,7 +29,7 @@
                 </button>
 
                 <button onclick="switchModule('usuarios')" id="btn-usuarios" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-300 hover:bg-slate-700/30 hover:text-white cursor-pointer">
-                    <i data-lucide="users-cog" class="h-4 w-4"></i>
+                    <i data-lucide="user-cog" class="h-4 w-4"></i>
                     <span>Control de Usuarios</span>
                 </button>
 
@@ -215,7 +215,7 @@
                         <p class="text-sm text-slate-400">Crea, modifica y asigna roles a los operadores del sistema (Administrador, Secretaria, Docente).</p>
                     </div>
                     <div class="h-10 w-10 rounded-xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                        <i data-lucide="users-cog" class="h-5 w-5"></i>
+                        <i data-lucide="user-cog" class="h-5 w-5"></i>
                     </div>
                 </div>
 
@@ -312,7 +312,7 @@
 
             
 
-            <div id="mod-postulante" class="space-y-6 max-w-4xl mx-auto app-module">
+            <div id="mod-postulante" class="hidden space-y-6 max-w-4xl mx-auto app-module">
                 <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
                     <div><h2 class="text-2xl font-bold text-white tracking-tight">Registro de Nuevo Postulante</h2><p class="text-sm text-slate-400">Introduce los datos oficiales para el ingreso al curso preuniversitario (CUP).</p></div>
                     <div class="h-10 w-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400"><i data-lucide="user-plus" class="h-5 w-5"></i></div>

@@ -64,4 +64,13 @@ class Inscripcion extends Model
             'id_carrera'
         )->withPivot('int_prioridad');
     }
+
+    public function grupo(): HasOne
+    {
+        return $this->hasOne(
+            Grupo::class,
+            'id_inscripcion',
+            'id_inscripcion'
+        );
+    }
 }

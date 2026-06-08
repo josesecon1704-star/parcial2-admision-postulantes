@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
@@ -10,10 +11,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Contratacion;
 use App\Models\Docente;
+use App\Models\Rol;
+use App\Models\Usuario;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Hash;
 
 class DocenteController extends Controller
 {
@@ -24,9 +28,9 @@ class DocenteController extends Controller
             'contratacionActiva:id_contratacion,id_docente,txt_estado,num_salario,fch_contrato',
             'profesiones:id_profesion,txt_descripcion',
         ])
-        ->orderBy('txt_nombre')
-        ->get()
-        ->map(fn($d) => $this->formatear($d));
+            ->orderBy('txt_nombre')
+            ->get()
+            ->map(fn($d) => $this->formatear($d));
 
         return response()->json(['success' => true, 'data' => $docentes]);
     }
@@ -40,7 +44,7 @@ class DocenteController extends Controller
             // Datos básicos del docente
             'txt_ci'      => ['required', 'string', 'max:20', 'unique:tbl_docente,txt_ci'],
             'txt_nombre'  => ['required', 'string', 'max:100'],
-            'txt_telefono'=> ['nullable', 'string', 'max:20'],
+            'txt_telefono' => ['nullable', 'string', 'max:20'],
             'txt_correo'  => ['required', 'email', 'max:100', 'unique:tbl_docente,txt_correo'],
             // Profesiones obligatorias (requisito del examen)
             'profesiones'                    => ['required', 'array', 'min:1'],
@@ -66,10 +70,32 @@ class DocenteController extends Controller
         try {
             // 1. Crear docente
             $docente = Docente::create($request->only(
-                'txt_ci', 'txt_nombre', 'txt_telefono', 'txt_correo'
+                'txt_ci',
+                'txt_nombre',
+                'txt_telefono',
+                'txt_correo'
             ));
 
-            // 2. Registrar profesiones con título y universidad (tabla pivote con atributos)
+            // --- NUEVO BLOQUE: Crear usuario automáticamente ---
+            $rolDocente = Rol::where('txt_nombre', 'DOCENTE')->first();
+
+            // Generar username (ej: juan.123)
+            $username = strtolower(explode(' ', $request->txt_nombre)[0]) . '.' . $docente->id_docente;
+
+            $usuario = Usuario::create([
+                'id_rol'       => $rolDocente->id_rol,
+                'txt_username' => $username,
+                'txt_email'    => $request->txt_correo,
+                'txt_password' => Hash::make('Docente' . $docente->id_docente . '!'),
+                'bol_estado'   => true,
+                'fch_creacion' => now(),
+            ]);
+
+            // Vincular usuario al docente (asumiendo que tu tabla docente tiene la columna id_usuario)
+            $docente->update(['id_usuario' => $usuario->id_usuario]);
+            // --------------------------------------------------
+
+            // 2. Registrar profesiones
             $profesionesSync = [];
             foreach ($request->profesiones as $p) {
                 $profesionesSync[$p['id_profesion']] = [
@@ -80,15 +106,15 @@ class DocenteController extends Controller
             }
             $docente->profesiones()->attach($profesionesSync);
 
-            // 3. Registrar formaciones académicas si vienen
+            // 3. Registrar formaciones
             if ($request->filled('formaciones')) {
                 $docente->formaciones()->attach($request->formaciones);
             }
 
-            // 4. Registrar contratación inicial
+            // 4. Registrar contratación
             Contratacion::create([
                 'id_docente'      => $docente->id_docente,
-                'id_usuario'      => auth()->id(),
+                'id_usuario'      => auth('api')->id(), // Quien registra la contratación
                 'fch_contrato'    => $request->contratacion['fch_contrato'],
                 'num_salario'     => $request->contratacion['num_salario'],
                 'txt_estado'      => 'ACTIVO',
@@ -99,12 +125,13 @@ class DocenteController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Docente registrado y contratado correctamente.',
-                'data'    => $this->formatear($docente->load(
-                    'profesiones', 'formaciones', 'contratacionActiva'
-                )),
+                'message' => 'Docente registrado, con usuario de acceso y contrato creado.',
+                'data'    => $this->formatear($docente->load('profesiones', 'formaciones', 'contratacionActiva')),
+                'credenciales' => [ // Retornamos esto solo al crear
+                    'username' => $usuario->txt_username,
+                    'password' => 'Docente' . $docente->id_docente . '!'
+                ]
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -144,12 +171,20 @@ class DocenteController extends Controller
         }
 
         $request->validate([
-            'txt_ci'      => ['sometimes', 'string', 'max:20',
-                Rule::unique('tbl_docente', 'txt_ci')->ignore($id, 'id_docente')],
+            'txt_ci'      => [
+                'sometimes',
+                'string',
+                'max:20',
+                Rule::unique('tbl_docente', 'txt_ci')->ignore($id, 'id_docente')
+            ],
             'txt_nombre'  => ['sometimes', 'string', 'max:100'],
-            'txt_telefono'=> ['nullable', 'string', 'max:20'],
-            'txt_correo'  => ['sometimes', 'email', 'max:100',
-                Rule::unique('tbl_docente', 'txt_correo')->ignore($id, 'id_docente')],
+            'txt_telefono' => ['nullable', 'string', 'max:20'],
+            'txt_correo'  => [
+                'sometimes',
+                'email',
+                'max:100',
+                Rule::unique('tbl_docente', 'txt_correo')->ignore($id, 'id_docente')
+            ],
         ]);
 
         $docente->update($request->only('txt_ci', 'txt_nombre', 'txt_telefono', 'txt_correo'));
@@ -183,7 +218,7 @@ class DocenteController extends Controller
     // GET /api/v1/docentes/mi-carga  (rol DOCENTE)
     public function miCarga(): JsonResponse
     {
-        $usuario  = auth()->user();
+        $usuario  = auth('api')->user();
 
         // Buscar el docente vinculado al usuario autenticado por correo
         $docente = Docente::where('txt_correo', $usuario->txt_email)->first();
@@ -239,11 +274,46 @@ class DocenteController extends Controller
         if ($conRelaciones) {
             $data['profesiones']   = $d->relationLoaded('profesiones') ? $d->profesiones : [];
             $data['formaciones']   = $d->relationLoaded('formaciones') ? $d->formaciones : [];
-            $data['contrataciones']= $d->relationLoaded('contrataciones') ? $d->contrataciones : [];
+            $data['contrataciones'] = $d->relationLoaded('contrataciones') ? $d->contrataciones : [];
             $data['grupos_asignados'] = $d->relationLoaded('asignaciones')
                 ? $d->asignaciones->count() : 0;
         }
 
         return $data;
+    }
+
+    // ── Buscar docente por CI (para el módulo Asignar Docente) ──
+    // GET /api/v1/docentes/buscar-ci?ci=xxxx
+    public function buscarPorCI(Request $request): JsonResponse
+    {
+        $request->validate(['ci' => ['required', 'string', 'min:2']]);
+
+        $docente = Docente::with(['profesiones'])
+            ->where('txt_ci', 'ilike', '%' . $request->ci . '%')
+            ->first();
+
+        if (! $docente) {
+            return response()->json(['success' => false, 'message' => 'Docente no encontrado.'], 404);
+        }
+
+        // Contar grupos asignados actualmente
+        $totalGrupos = $docente->asignaciones()->distinct('id_grupo')->count('id_grupo');
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'id_docente'             => $docente->id_docente,
+                'txt_ci'                 => $docente->txt_ci,
+                'txt_nombre'             => $docente->txt_nombre,
+                'txt_correo'             => $docente->txt_correo,
+                'txt_telefono'           => $docente->txt_telefono,
+                'total_grupos_asignados' => $totalGrupos,
+                'profesiones'            => $docente->profesiones->map(fn($p) => [
+                    'id_profesion'    => $p->id_profesion,
+                    'txt_descripcion' => $p->txt_descripcion,
+                    'txt_titulo'      => $p->pivot->txt_titulo,
+                ]),
+            ],
+        ]);
     }
 }

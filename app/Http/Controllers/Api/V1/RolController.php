@@ -85,7 +85,7 @@ class RolController extends Controller
         }
 
         // Evitar que el admin cambie su propio rol accidentalmente
-        if ($usuario->id_usuario === auth()->id()) {
+        if ($usuario->id_usuario === auth('api')->id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No puedes cambiar tu propio rol.',

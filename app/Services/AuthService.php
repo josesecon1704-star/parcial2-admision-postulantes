@@ -64,7 +64,9 @@ class AuthService
      */
     public function me(): Usuario
     {
-        return auth()->user()->load('rol');
+        /** @var \App\Models\Usuario $usuario */
+        $usuario = auth('api')->user();
+        return $usuario->load('rol');
     }
 
     /**

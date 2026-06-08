@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 // DESTINO: app/Models/Docente.php
 // Tabla: tbl_docente
@@ -8,6 +9,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Docente extends Model
 {
@@ -20,6 +22,7 @@ class Docente extends Model
         'txt_nombre',
         'txt_telefono',
         'txt_correo',
+        'txt_usuario'
     ];
 
     // Profesiones con título y universidad (tabla pivote con atributos)
@@ -54,12 +57,17 @@ class Docente extends Model
     public function contratacionActiva(): HasMany
     {
         return $this->hasMany(Contratacion::class, 'id_docente', 'id_docente')
-                    ->where('txt_estado', 'ACTIVO');
+            ->where('txt_estado', 'ACTIVO');
     }
 
     // Grupos asignados (via tbl_asignacion_docente)
     public function asignaciones(): HasMany
     {
         return $this->hasMany(AsignacionDocente::class, 'id_docente', 'id_docente');
+    }
+
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
     }
 }

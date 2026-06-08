@@ -170,7 +170,7 @@ class UsuarioController extends Controller
         }
 
         // Evitar que el admin se desactive a sí mismo
-        if ($usuario->id_usuario === auth()->id()) {
+        if ($usuario->id_usuario === auth('api')->id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No puedes desactivar tu propia cuenta.',
@@ -203,7 +203,7 @@ class UsuarioController extends Controller
             ], 404);
         }
 
-        if ($usuario->id_usuario === auth()->id()) {
+        if ($usuario->id_usuario === auth('api')->id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No puedes modificar el estado de tu propia cuenta.',

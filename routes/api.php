@@ -8,11 +8,13 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AulaController;
 use App\Http\Controllers\Api\V1\DocenteController;
+use App\Http\Controllers\Api\V1\EvaluacionController;
 use App\Http\Controllers\Api\V1\GrupoController;
 use App\Http\Controllers\Api\V1\HorarioController;
 use App\Http\Controllers\Api\V1\InscripcionController;
 use App\Http\Controllers\Api\V1\MateriaController;
 use App\Http\Controllers\Api\V1\PostulanteController;
+use App\Http\Controllers\Api\V1\ProfesionController;
 use App\Http\Controllers\Api\V1\RolController;
 use App\Http\Controllers\Api\V1\TurnoController;
 use App\Http\Controllers\Api\V1\UsuarioController;
@@ -30,7 +32,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/logout',  [AuthController::class, 'logout'])->name('logout');
             Route::post('/refresh', [AuthController::class, 'refresh'])->name('refresh');
             Route::get('/me',       [AuthController::class, 'me'])->name('me');
-            
         });
     });
 
@@ -40,7 +41,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware('jwt.auth')->group(function () {
         Route::get('dashboard/metrics', [DashboardController::class, 'getMetrics']);
         Route::get('aulas', [AulaController::class, 'index']);
-Route::get('materias', [MateriaController::class, 'index']);
+        Route::get('materias', [MateriaController::class, 'index']);
         // ── Solo ADMINISTRADOR ──────────────────────────────
         Route::middleware('role:ADMINISTRADOR')->group(function () {
 
@@ -84,11 +85,20 @@ Route::get('materias', [MateriaController::class, 'index']);
                 ->only(['index', 'store', 'show', 'destroy']);
 
             // CU-12: Docentes
+            Route::get('docentes/buscar-ci', [DocenteController::class, 'buscarPorCI']);
             Route::apiResource('docentes', DocenteController::class);
+
+            // Profesiones (para select en formulario de docente)
+            Route::get('profesiones', [ProfesionController::class, 'index']);
+
+            // CU-21/22: Evaluaciones y notas
+            Route::get('evaluaciones',                           [EvaluacionController::class, 'index']);
+            Route::post('evaluaciones',                          [EvaluacionController::class, 'store']);
+            Route::put('evaluaciones/{id}/detalles',             [EvaluacionController::class, 'guardarDetalles']);
 
             // CU-14/18: Grupos (consultar)
             Route::apiResource('grupos', GrupoController::class)->only(['index', 'show']);
-Route::get('grupos/{id}/estudiantes', [GrupoController::class, 'estudiantes']);
+            Route::get('grupos/{id}/estudiantes', [GrupoController::class, 'estudiantes']);
         });
 
         // ── Solo DOCENTE ────────────────────────────────────
@@ -96,8 +106,6 @@ Route::get('grupos/{id}/estudiantes', [GrupoController::class, 'estudiantes']);
             // CU-13: Carga horaria propia
             Route::get('docentes/mi-carga', [DocenteController::class, 'miCarga']);
         });
-
-        
     });
 });
 

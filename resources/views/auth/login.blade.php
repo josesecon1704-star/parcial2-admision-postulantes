@@ -111,7 +111,7 @@
             localStorage.setItem('token', tokenReal); 
 
             loginForm.reset(); 
-            window.location.href = '/dashboard'; 
+            window.location.href = '/prueba2'; 
         } else {
             throw new Error(result.message || 'Las credenciales no coinciden.');
         }

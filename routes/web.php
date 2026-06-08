@@ -6,12 +6,19 @@ Route::get('/login', function () {
     return view('auth.login');
 });
 
-// Ruta 2: La SPA Única (Contiene Dashboard, Postulantes, Exámenes, Grupos y Reportes)
-Route::get('/dashboard', function () {
-    return view('dashboard.dashboard');
+// Ruta 2: para administradores y secretarias
+Route::get('/layouts', function () {
+    return view('layouts.admin');
 });
 
-// Redirección por defecto para comodidad en el examen
+Route::get('/prueba', function () {
+    return view('layouts.admin2');
+});
+Route::get('/prueba2', function () {
+    return view('layouts.admin3');
+});
+
+// Redirección por defecto
 Route::get('/', function () {
     return redirect('/login');
 });
