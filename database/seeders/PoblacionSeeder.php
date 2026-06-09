@@ -508,7 +508,7 @@ class PoblacionSeeder extends Seeder
                 'int_cantidad_estudiantes' => $cantidad,
                 'int_capacidad_maxma'      => self::CAPACIDAD_GRUPO,
                 'id_inscripcion'           => $idInscripcion,
-            ]);
+            ], 'id_grupo'); // ← especificar la PK real
 
             // Asignar los 4 bloques horarios del día al grupo
             foreach ($bloquesDia as $idHorario) {
