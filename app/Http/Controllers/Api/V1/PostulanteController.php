@@ -20,6 +20,7 @@ use App\Models\Postulante;
 use App\Services\PostulanteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PostulanteController extends Controller
 {
@@ -39,7 +40,7 @@ class PostulanteController extends Controller
             perPage: (int) $request->get('per_page', 15),
         );
 
-        
+
 
         return response()->json([
             'success' => true,
@@ -108,15 +109,61 @@ class PostulanteController extends Controller
     // ──────────────────────────────────────────────────────
     public function store(StorePostulanteRequest $request): JsonResponse
     {
-        $postulante = $this->service->crear($request->validated());
+        // Validación adicional para carreras y grupo
+        $request->validate([
+            'carreras'                 => ['sometimes', 'array', 'min:1', 'max:2'],
+            'carreras.*.id_carrera'    => ['required_with:carreras', 'integer', 'exists:tbl_carrera,id_carrera'],
+            'carreras.*.int_prioridad' => ['required_with:carreras', 'integer', 'in:1,2'],
+            'id_grupo'                 => ['nullable', 'integer', 'exists:tbl_grupo,id_grupo'],
+        ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Postulante registrado correctamente.',
-            'data'    => $this->service->formatear($postulante),
-        ], 201);
+        DB::beginTransaction();
+        try {
+            // 1. Crear postulante en tbl_postulante
+            $postulante = $this->service->crear($request->validated());
+
+            // 2. Crear inscripción automáticamente con el grupo elegido
+            $gestion = \App\Models\Gestion::orderByDesc('int_año')->first();
+            $inscripcion = \App\Models\Inscripcion::create([
+                'id_postulante'          => $postulante->id_postulante,
+                'id_gestion'             => $gestion?->id_gestion ?? 1,
+                'txt_estado_inscripcion' => 'PENDIENTE',
+                'id_grupo'               => $request->id_grupo ?? null,
+            ]);
+
+            // 3. Registrar carreras elegidas en tbl_inscripcion_carrera
+            if ($request->filled('carreras')) {
+                foreach ($request->carreras as $c) {
+                    DB::table('tbl_inscripcion_carrera')->insert([
+                        'id_inscripcion' => $inscripcion->id_inscripcion,
+                        'id_carrera'     => $c['id_carrera'],
+                        'int_prioridad'  => $c['int_prioridad'],
+                    ]);
+                }
+            }
+
+            // 4. Actualizar contador de estudiantes del grupo
+            if ($request->id_grupo) {
+                DB::table('tbl_grupo')
+                    ->where('id_grupo', $request->id_grupo)
+                    ->increment('int_cantidad_estudiantes');
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Postulante registrado correctamente.',
+                'data'    => $this->service->formatear($postulante->fresh()),
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar: ' . $e->getMessage(),
+            ], 500);
+        }
     }
-
     // ──────────────────────────────────────────────────────
     // CU-07: Modificar datos del postulante
     // PUT /api/v1/postulantes/{id}
@@ -170,7 +217,6 @@ class PostulanteController extends Controller
                 'success' => true,
                 'message' => "Postulante '{$postulante->txt_nombre}' eliminado correctamente.",
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -195,7 +241,7 @@ class PostulanteController extends Controller
             'fch_nacimiento' => $postulante->fch_nacimiento?->format('Y-m-d'),
             'edad'           => $postulante->edad,
             'chr_sexo'       => $postulante->chr_sexo,
-            'sexo_label'     => match($postulante->chr_sexo) {
+            'sexo_label'     => match ($postulante->chr_sexo) {
                 'M' => 'Masculino',
                 'F' => 'Femenino',
                 'X' => 'Otro',

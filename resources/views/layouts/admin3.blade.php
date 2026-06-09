@@ -343,6 +343,56 @@
                                 </div>
                             </div>
 
+                            <!-- Carreras (tbl_inscripcion_carrera) -->
+                            <div class="border-t border-slate-700/50 pt-5">
+                                <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2 mb-3">
+                                    <i data-lucide="graduation-cap" class="h-4 w-4"></i>
+                                    Carreras de Preferencia
+                                </h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs text-slate-400 uppercase font-bold">1ra Opción <span class="text-red-400">*</span></label>
+                                        <div class="relative">
+                                            <select id="reg_carrera_1" required
+                                                class="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 appearance-none pr-8">
+                                                <option value="" disabled selected>— Selecciona carrera —</option>
+                                            </select>
+                                            <i data-lucide="chevron-down" class="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none"></i>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs text-slate-400 uppercase font-bold">2da Opción <span class="text-red-400">*</span></label>
+                                        <div class="relative">
+                                            <select id="reg_carrera_2" required
+                                                class="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 appearance-none pr-8">
+                                                <option value="" disabled selected>— Selecciona carrera —</option>
+                                            </select>
+                                            <i data-lucide="chevron-down" class="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Selección de Grupo / Horario -->
+                            <div class="border-t border-slate-700/50 pt-5">
+                                <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 mb-3">
+                                    <i data-lucide="calendar-clock" class="h-4 w-4"></i>
+                                    Selección de Grupo y Horario
+                                </h4>
+                                <div class="space-y-3">
+                                    <div class="relative">
+                                        <select id="reg_id_grupo" required
+                                            class="w-full bg-slate-950 border border-slate-700/60 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500 appearance-none pr-8"
+                                            onchange="regMostrarHorario()">
+                                            <option value="" disabled selected>— Cargando grupos disponibles... —</option>
+                                        </select>
+                                        <i data-lucide="chevron-down" class="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none"></i>
+                                    </div>
+                                    <!-- Detalle del horario del grupo seleccionado -->
+                                    <div id="reg-horario-detalle" class="hidden p-3 bg-slate-900 border border-emerald-500/20 rounded-xl space-y-1.5"></div>
+                                </div>
+                            </div>
+
                             <div class="flex items-center justify-end gap-3 pt-5 border-t border-slate-700/50">
                                 <button type="reset"
                                     class="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 text-sm font-medium transition-all flex items-center gap-2 cursor-pointer">
@@ -1582,32 +1632,97 @@
     // ─────────────────────────────────────────────────────────
 
     // ── Cargar requisitos físicos desde la API (tbl_requisito) ──
+    // Cache de grupos para mostrar horarios
+    let REG_GRUPOS = [];
+
     async function loadRequisitos() {
         const cont = document.getElementById('lista-requisitos');
         if (!cont) return;
+
+        // Cargar requisitos, carreras y grupos en paralelo
         try {
-            const res    = await fetch(`${API_BASE_URL}/api/v1/requisitos`, { headers: authHeaders() });
-            const result = await res.json();
-            const lista  = Array.isArray(result.data) ? result.data : (result.data?.data ?? []);
-            if (!lista.length) {
-                cont.innerHTML = '<p class="text-slate-500 text-xs col-span-2">No hay requisitos configurados.</p>';
-                return;
-            }
-            cont.innerHTML = lista.map(r => `
-                <label class="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:border-amber-500/40 transition-all">
-                    <input type="checkbox" name="requisito" value="${r.id_requisito}"
-                        class="h-4 w-4 rounded accent-amber-500 cursor-pointer">
-                    <span class="text-xs text-slate-300">${r.txt_descripcion_requisito}</span>
-                </label>`).join('');
+            const h = authHeaders();
+            const [resR, resC, resG] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/v1/requisitos`, { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/carreras`,   { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/grupos`,     { headers: h }),
+            ]);
+            const [rR, rC, rG] = await Promise.all([resR.json(), resC.json(), resG.json()]);
+
+            // Requisitos
+            const requisitos = Array.isArray(rR.data) ? rR.data : (rR.data?.data ?? []);
+            cont.innerHTML = requisitos.length
+                ? requisitos.map(r => `
+                    <label class="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:border-amber-500/40 transition-all">
+                        <input type="checkbox" name="requisito" value="${r.id_requisito}"
+                            class="h-4 w-4 rounded accent-amber-500 cursor-pointer">
+                        <span class="text-xs text-slate-300">${r.txt_descripcion_requisito}</span>
+                    </label>`).join('')
+                : '<p class="text-slate-500 text-xs col-span-2">No hay requisitos configurados.</p>';
+
+            // Carreras
+            const carreras = Array.isArray(rC.data) ? rC.data : (rC.data?.data ?? []);
+            const optsCarrera = carreras.map(c =>
+                `<option value="${c.id_carrera}">${c.txt_nombre}</option>`
+            ).join('');
+            document.getElementById('reg_carrera_1').innerHTML =
+                '<option value="" disabled selected>— Selecciona 1ra opción —</option>' + optsCarrera;
+            document.getElementById('reg_carrera_2').innerHTML =
+                '<option value="" disabled selected>— Selecciona 2da opción —</option>' + optsCarrera;
+
+            // Grupos con cupo disponible
+            REG_GRUPOS = rG.data ?? [];
+            const gruposDisponibles = REG_GRUPOS.filter(g =>
+                (g.cupos_disponibles ?? (g.int_capacidad_maxma - g.int_cantidad_estudiantes)) > 0
+            );
+            const selGrupo = document.getElementById('reg_id_grupo');
+            selGrupo.innerHTML = gruposDisponibles.length
+                ? '<option value="" disabled selected>— Elige un grupo/horario —</option>' +
+                  gruposDisponibles.map(g => {
+                      const cupos = g.cupos_disponibles ?? (g.int_capacidad_maxma - g.int_cantidad_estudiantes);
+                      const hrs   = (g.horarios ?? [])
+                          .map(h => `${h.dia} ${(h.inicio??'').slice(0,5)}-${(h.final??'').slice(0,5)} (${h.turno})`)
+                          .join(' | ') || 'Sin horario';
+                      return `<option value="${g.id_grupo}">${g.txt_nombre} · ${hrs} · ${cupos} cupos</option>`;
+                  }).join('')
+                : '<option value="" disabled selected>— Sin grupos con cupo disponible —</option>';
+
+            lucide.createIcons();
         } catch (err) {
-            cont.innerHTML = '<p class="text-red-400 text-xs col-span-2">Error al cargar requisitos.</p>';
+            cont.innerHTML = '<p class="text-red-400 text-xs col-span-2">Error al cargar datos del formulario.</p>';
         }
+    }
+
+    // Muestra el detalle del horario al elegir un grupo
+    function regMostrarHorario() {
+        const idGrupo = parseInt(document.getElementById('reg_id_grupo').value);
+        const grupo   = REG_GRUPOS.find(g => g.id_grupo === idGrupo);
+        const detalle = document.getElementById('reg-horario-detalle');
+        if (!grupo || !grupo.horarios?.length) { detalle.classList.add('hidden'); return; }
+
+        detalle.innerHTML = grupo.horarios.map(h => `
+            <div class="flex items-center gap-3">
+                <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold w-20 text-center">${h.dia}</span>
+                <span class="text-white text-sm">${(h.inicio??'').slice(0,5)} → ${(h.final??'').slice(0,5)}</span>
+                <span class="text-slate-400 text-xs">${h.turno}</span>
+            </div>`).join('');
+        detalle.classList.remove('hidden');
     }
 
     // ── CU-06: Guardar nuevo postulante ──
     document.getElementById('form-registro-postulante').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-registrar-postulante');
+
+        const carrera1 = parseInt(document.getElementById('reg_carrera_1').value);
+        const carrera2 = parseInt(document.getElementById('reg_carrera_2').value);
+        const idGrupo  = parseInt(document.getElementById('reg_id_grupo').value);
+
+        if (carrera1 && carrera2 && carrera1 === carrera2) {
+            alert('La 1ra y 2da opción de carrera deben ser diferentes.');
+            return;
+        }
+
         const requisitosSeleccionados = [...document.querySelectorAll('input[name="requisito"]:checked')]
             .map(cb => parseInt(cb.value));
 
@@ -1618,10 +1733,17 @@
             txt_telefono:   document.getElementById('txt_telefono').value.trim() || null,
             fch_nacimiento: document.getElementById('fch_nacimiento').value,
             chr_sexo:       document.getElementById('chr_sexo').value,
-            txt_colegio:    document.getElementById('txt_colegio').value.trim() || null,
-            txt_ciudad:     document.getElementById('txt_ciudad').value.trim()  || null,
-            txt_direccion:  document.getElementById('txt_direccion').value.trim() || null,
+            txt_colegio:    document.getElementById('txt_colegio').value.trim()    || null,
+            txt_ciudad:     document.getElementById('txt_ciudad').value.trim()     || null,
+            txt_direccion:  document.getElementById('txt_direccion').value.trim()  || null,
             requisitos:     requisitosSeleccionados,
+            // Carreras elegidas
+            carreras: [
+                { id_carrera: carrera1, int_prioridad: 1 },
+                { id_carrera: carrera2, int_prioridad: 2 },
+            ].filter(c => c.id_carrera),
+            // Grupo seleccionado
+            id_grupo: idGrupo || null,
         };
         try {
             btn.disabled = true;

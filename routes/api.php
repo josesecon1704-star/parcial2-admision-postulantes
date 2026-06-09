@@ -7,6 +7,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AulaController;
+use App\Http\Controllers\Api\V1\CarreraController;
 use App\Http\Controllers\Api\V1\DocenteController;
 use App\Http\Controllers\Api\V1\EvaluacionController;
 use App\Http\Controllers\Api\V1\GrupoController;
@@ -40,8 +41,9 @@ Route::prefix('v1')->group(function () {
     // ════════════════════════════════════════════════════════
     Route::middleware('jwt.auth')->group(function () {
         Route::get('dashboard/metrics', [DashboardController::class, 'getMetrics']);
-        Route::get('aulas', [AulaController::class, 'index']);
+        Route::get('aulas',    [AulaController::class,    'index']);
         Route::get('materias', [MateriaController::class, 'index']);
+        Route::get('carreras', [CarreraController::class, 'index']);
         // ── Solo ADMINISTRADOR ──────────────────────────────
         Route::middleware('role:ADMINISTRADOR')->group(function () {
 
