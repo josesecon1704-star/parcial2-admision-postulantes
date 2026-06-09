@@ -97,18 +97,20 @@ class PostulanteService
      */
     public function formatear(Postulante $postulante, bool $conRelaciones = false): array
     {
-        // Buscamos la última inscripción y cargamos las carreras de una vez
+        // Cargamos la última inscripción con carreras, grupo y gestión
         $inscripcion = $postulante->inscripciones()
-            ->with('carreras')
+            ->with(['carreras', 'grupo', 'gestion'])
             ->latest('fch_inscripcion')
             ->first();
 
-        // Filtramos las carreras por prioridad usando el pivot
         $carrera1 = $inscripcion ? $inscripcion->carreras->firstWhere('pivot.int_prioridad', 1) : null;
         $carrera2 = $inscripcion ? $inscripcion->carreras->firstWhere('pivot.int_prioridad', 2) : null;
 
+        // Grupo: ahora viene de inscripcion.id_grupo (relación directa)
+        $grupo   = $inscripcion?->grupo;
+        $gestion = $inscripcion?->gestion;
+
         $data = [
-            // ── tbl_postulante — todos los campos ──────────────────────
             'id_postulante'  => $postulante->id_postulante,
             'txt_ci'         => $postulante->txt_ci,
             'txt_nombre'     => $postulante->txt_nombre,
@@ -119,27 +121,22 @@ class PostulanteService
             'txt_direccion'  => $postulante->txt_direccion,
             'txt_colegio'    => $postulante->txt_colegio,
             'txt_ciudad'     => $postulante->txt_ciudad,
-            // ── Carreras (de tbl_inscripcion_carrera) ──────────────────
             'carrera_1'      => $carrera1?->txt_nombre ?? 'N/A',
             'carrera_2'      => $carrera2?->txt_nombre ?? '-',
-            // ── Grupo (tbl_grupo via tbl_inscripcion) ──────────────────
-            'grupo'          => $inscripcion?->grupo ? [
-                'id_grupo'   => $inscripcion->grupo->id_grupo,
-                'txt_nombre' => $inscripcion->grupo->txt_nombre,
+            'grupo'          => $grupo ? [
+                'id_grupo'   => $grupo->id_grupo,
+                'txt_nombre' => $grupo->txt_nombre,
             ] : null,
-            // ── Gestión (tbl_gestion via tbl_inscripcion) ──────────────
-            'gestion'        => $inscripcion?->gestion ? [
-                'id_gestion'  => $inscripcion->gestion->id_gestion,
-                'int_año'     => $inscripcion->gestion->int_año,
-                'txt_periodo' => $inscripcion->gestion->txt_periodo,
+            'gestion'        => $gestion ? [
+                'id_gestion'  => $gestion->id_gestion,
+                'int_año'     => $gestion->int_año,
+                'txt_periodo' => $gestion->txt_periodo,
             ] : null,
         ];
 
-        // Relaciones opcionales (solo cuando show() pasa conRelaciones: true)
         if ($conRelaciones) {
             $postulante->loadCount('requisitos');
             $data['requisitos_entregados'] = $postulante->requisitos_count;
-
             $data['ultima_inscripcion'] = $inscripcion ? [
                 'id_inscripcion'         => $inscripcion->id_inscripcion,
                 'txt_estado_inscripcion' => $inscripcion->txt_estado_inscripcion,

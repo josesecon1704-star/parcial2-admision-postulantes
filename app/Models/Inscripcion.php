@@ -65,12 +65,8 @@ class Inscripcion extends Model
         )->withPivot('int_prioridad');
     }
 
-    public function grupo(): HasOne
+    public function grupo(): BelongsTo
     {
-        return $this->hasOne(
-            Grupo::class,
-            'id_inscripcion',
-            'id_inscripcion'
-        );
+        return $this->belongsTo(Grupo::class, 'id_grupo', 'id_grupo');
     }
 }
