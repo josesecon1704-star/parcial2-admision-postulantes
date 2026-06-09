@@ -318,10 +318,19 @@ class PoblacionSeeder extends Seeder
             } while (in_array($ci, $usedCIs));
             $usedCIs[] = $ci;
 
-            // Correo único
-            $base    = strtolower(substr($nombre1, 0, 3) . substr($apellido1, 0, 4) . $i);
-            $base    = preg_replace('/[^a-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $base));
-            $correo  = "{$base}@gmail.com";
+            // Correo único — sin iconv para compatibilidad con todos los servidores
+            $base   = strtolower(substr($nombre1, 0, 3) . substr($apellido1, 0, 4) . $i);
+            $base   = strtr($base, [
+                'á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u',
+                'à'=>'a','è'=>'e','ì'=>'i','ò'=>'o','ù'=>'u',
+                'ä'=>'a','ë'=>'e','ï'=>'i','ö'=>'o','ü'=>'u',
+                'â'=>'a','ê'=>'e','î'=>'i','ô'=>'o','û'=>'u',
+                'ã'=>'a','õ'=>'o','ñ'=>'n','ç'=>'c',
+                'Á'=>'a','É'=>'e','Í'=>'i','Ó'=>'o','Ú'=>'u',
+                'Ñ'=>'n','Ü'=>'u','Ö'=>'o',
+            ]);
+            $base   = preg_replace('/[^a-z0-9]/', '', $base);
+            $correo = "{$base}@gmail.com";
             $usedCorreos[] = $correo;
 
             $sexo    = $sexos[$i % 10];
