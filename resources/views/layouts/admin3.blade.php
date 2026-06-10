@@ -454,26 +454,6 @@
                                 <input type="text" id="edit_direccion" maxlength="255"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500">
                             </div>
-
-                            <!-- Estado de Inscripción -->
-                            <div class="space-y-1.5 sm:col-span-2 pt-1 border-t border-slate-700/50">
-                                <label class="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
-                                    <i data-lucide="badge-check" class="h-3.5 w-3.5 text-blue-400"></i>
-                                    Estado de Inscripción
-                                </label>
-                                <div class="flex items-center gap-3">
-                                    <select id="edit_estado_inscripcion"
-                                        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500">
-                                        <option value="">— Sin inscripción —</option>
-                                        <option value="PENDIENTE">PENDIENTE</option>
-                                        <option value="PROCESADO">PROCESADO</option>
-                                        <option value="ANULADO">ANULADO</option>
-                                    </select>
-                                    <input type="hidden" id="edit_id_inscripcion">
-                                    <span id="edit_estado_badge" class="px-3 py-1.5 rounded-lg text-xs font-bold border shrink-0"></span>
-                                </div>
-                                <p class="text-[10px] text-slate-500">Cambiar a PROCESADO asignará al postulante a un grupo activo.</p>
-                            </div>
                         </div>
                         <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
                             <button type="button" onclick="cerrarModalPost()"
@@ -1746,43 +1726,16 @@
             const res    = await fetch(`${API_BASE_URL}/api/v1/postulantes/${id}`, { headers: authHeaders() });
             const result = await res.json();
             const p      = result.data ?? result;
-
-            document.getElementById('edit_id_post').value         = p.id_postulante;
-            document.getElementById('edit_ci').value              = p.txt_ci          ?? '';
-            document.getElementById('edit_nombre').value          = p.txt_nombre      ?? '';
-            document.getElementById('edit_correo').value          = p.txt_correo      ?? '';
-            document.getElementById('edit_telefono').value        = p.txt_telefono    ?? '';
-            document.getElementById('edit_fch_nacimiento').value  = p.fch_nacimiento  ?? '';
-            document.getElementById('edit_sexo').value            = p.chr_sexo        ?? 'M';
-            document.getElementById('edit_colegio').value         = p.txt_colegio     ?? '';
-            document.getElementById('edit_ciudad').value          = p.txt_ciudad      ?? '';
-            document.getElementById('edit_direccion').value       = p.txt_direccion   ?? '';
-
-            // Cargar estado de inscripción
-            const insc   = p.ultima_inscripcion ?? null;
-            const estado = insc?.txt_estado_inscripcion ?? '';
-            const idInsc = insc?.id_inscripcion ?? '';
-
-            document.getElementById('edit_id_inscripcion').value        = idInsc;
-            document.getElementById('edit_estado_inscripcion').value    = estado;
-
-            // Badge de color según estado
-            const badge  = document.getElementById('edit_estado_badge');
-            const colores = {
-                PROCESADO:  'bg-blue-500/10 text-blue-400 border-blue-500/20',
-                PENDIENTE:  'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                ANULADO:    'bg-red-500/10 text-red-400 border-red-500/20',
-            };
-            badge.textContent = estado || 'Sin inscripción';
-            badge.className   = `px-3 py-1.5 rounded-lg text-xs font-bold border shrink-0 ${colores[estado] ?? 'bg-slate-700 text-slate-400 border-slate-600'}`;
-
-            // Actualizar badge en tiempo real al cambiar el select
-            document.getElementById('edit_estado_inscripcion').onchange = function() {
-                const nuevo = this.value;
-                badge.textContent = nuevo || 'Sin inscripción';
-                badge.className   = `px-3 py-1.5 rounded-lg text-xs font-bold border shrink-0 ${colores[nuevo] ?? 'bg-slate-700 text-slate-400 border-slate-600'}`;
-            };
-
+            document.getElementById('edit_id_post').value      = p.id_postulante;
+            document.getElementById('edit_ci').value           = p.txt_ci         ?? '';
+            document.getElementById('edit_nombre').value       = p.txt_nombre     ?? '';
+            document.getElementById('edit_correo').value       = p.txt_correo     ?? '';
+            document.getElementById('edit_telefono').value     = p.txt_telefono   ?? '';
+            document.getElementById('edit_fch_nacimiento').value = p.fch_nacimiento ?? '';
+            document.getElementById('edit_sexo').value         = p.chr_sexo       ?? 'M';
+            document.getElementById('edit_colegio').value      = p.txt_colegio    ?? '';
+            document.getElementById('edit_ciudad').value       = p.txt_ciudad     ?? '';
+            document.getElementById('edit_direccion').value    = p.txt_direccion  ?? '';
             document.getElementById('modal-editar-post').classList.remove('hidden');
             lucide.createIcons();
         } catch (err) {
@@ -1797,9 +1750,6 @@
     document.getElementById('form-editar-post').addEventListener('submit', async (e) => {
         e.preventDefault();
         const id    = document.getElementById('edit_id_post').value;
-        const idInsc = document.getElementById('edit_id_inscripcion').value;
-        const nuevoEstado = document.getElementById('edit_estado_inscripcion').value;
-
         const datos = {
             txt_ci:         document.getElementById('edit_ci').value.trim(),
             txt_nombre:     document.getElementById('edit_nombre').value.trim(),
@@ -1811,27 +1761,18 @@
             txt_ciudad:     document.getElementById('edit_ciudad').value.trim()   || null,
             txt_direccion:  document.getElementById('edit_direccion').value.trim()|| null,
         };
-
         try {
-            // 1. Actualizar datos del postulante
             const res    = await fetch(`${API_BASE_URL}/api/v1/postulantes/${id}`, {
                 method: 'PUT', headers: authHeaders(), body: JSON.stringify(datos)
             });
             const result = await res.json();
-            if (!result.success) { alert('Error: ' + (result.message ?? 'No se pudo guardar.')); return; }
-
-            // 2. Actualizar estado de inscripción si hay una y cambió
-            if (idInsc && nuevoEstado) {
-                await fetch(`${API_BASE_URL}/api/v1/inscripciones/${idInsc}/estado`, {
-                    method:  'PATCH',
-                    headers: authHeaders(),
-                    body:    JSON.stringify({ txt_estado_inscripcion: nuevoEstado }),
-                });
+            if (result.success) {
+                mostrarToast('Postulante actualizado correctamente.', 'ok');
+                cerrarModalPost();
+                loadTablaEdicion();
+            } else {
+                alert('Error: ' + (result.message ?? 'No se pudo guardar.'));
             }
-
-            mostrarToast('Postulante actualizado correctamente.', 'ok');
-            cerrarModalPost();
-            loadTablaEdicion();
         } catch (err) {
             alert('No se pudo conectar con el servidor.');
         }
@@ -1913,27 +1854,15 @@
         try {
             const h = authHeaders();
 
-            // Gestiones no tiene endpoint propio aún — se carga solo grupos
+            // per_page alto para traer TODOS los postulantes (no solo la primera página)
             const [resP, resG] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/postulantes`, { headers: h }),
-                fetch(`${API_BASE_URL}/api/v1/grupos`,      { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=2000`, { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/grupos`, { headers: h }),
             ]);
             const [rP, rG] = await Promise.all([resP.json(), resG.json()]);
 
-            // Listado base (id, nombre, ci, carrera_1, carrera_2)
-            let listaBase = Array.isArray(rP.data) ? rP.data : (rP.data?.data ?? []);
-
-            // Enriquecer SIEMPRE con detalle individual (el listado no incluye los otros campos)
-            let lista = listaBase.length > 0 ? await pbEnriquecerLista(listaBase) : [];
-
-            // Preservar carrera_1 / carrera_2 del listado si el detalle no las trae
-            lista = lista.map((p, i) => ({
-                carrera_1: listaBase[i]?.carrera_1 ?? '—',
-                carrera_2: listaBase[i]?.carrera_2 ?? '—',
-                ...p,
-            }));
-
-            PB.datos = lista;
+            // El servicio ya devuelve todos los campos + carreras + grupo + gestion
+            PB.datos = Array.isArray(rP.data) ? rP.data : (rP.data?.data ?? []);
 
             // Selector de grupos
             const grupos = Array.isArray(rG.data) ? rG.data : (rG.data?.data ?? []);
