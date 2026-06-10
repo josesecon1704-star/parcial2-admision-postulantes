@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
@@ -122,7 +123,6 @@ class InscripcionController extends Controller
                 'message' => 'Inscripción registrada y procesada. Grupos actualizados automáticamente.',
                 'data'    => $inscripcion->load('postulante', 'gestion', 'carreras', 'pago'),
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -142,7 +142,10 @@ class InscripcionController extends Controller
     public function show(int $id): JsonResponse
     {
         $inscripcion = Inscripcion::with([
-            'postulante', 'gestion', 'carreras', 'pago',
+            'postulante',
+            'gestion',
+            'carreras',
+            'pago',
         ])->find($id);
 
         if (! $inscripcion) {
@@ -169,5 +172,53 @@ class InscripcionController extends Controller
 
         $inscripcion->delete();
         return response()->json(['success' => true, 'message' => 'Inscripción anulada.']);
+    }
+
+    public function actualizarEstado(Request $request, int $id): JsonResponse
+    {
+        $inscripcion = \App\Models\Inscripcion::find($id);
+
+        if (!$inscripcion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Inscripción no encontrada.',
+            ], 404);
+        }
+
+        $request->validate([
+            'txt_estado_inscripcion' => [
+                'required',
+                'string',
+                \Illuminate\Validation\Rule::in(['PENDIENTE', 'PROCESADO', 'ANULADO']),
+            ],
+        ]);
+
+        $estadoAnterior = $inscripcion->txt_estado_inscripcion;
+        $estadoNuevo    = $request->txt_estado_inscripcion;
+
+        $inscripcion->update([
+            'txt_estado_inscripcion' => $estadoNuevo,
+        ]);
+
+        // Si cambia a PROCESADO y tiene grupo asignado → incrementar contador
+        if ($estadoAnterior !== 'PROCESADO' && $estadoNuevo === 'PROCESADO' && $inscripcion->id_grupo) {
+            \App\Models\Grupo::where('id_grupo', $inscripcion->id_grupo)
+                ->increment('int_cantidad_estudiantes');
+        }
+
+        // Si sale de PROCESADO → decrementar contador
+        if ($estadoAnterior === 'PROCESADO' && $estadoNuevo !== 'PROCESADO' && $inscripcion->id_grupo) {
+            \App\Models\Grupo::where('id_grupo', $inscripcion->id_grupo)
+                ->decrement('int_cantidad_estudiantes');
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Estado actualizado: {$estadoAnterior} → {$estadoNuevo}.",
+            'data'    => [
+                'id_inscripcion'         => $inscripcion->id_inscripcion,
+                'txt_estado_inscripcion' => $inscripcion->txt_estado_inscripcion,
+            ],
+        ]);
     }
 }

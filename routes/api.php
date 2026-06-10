@@ -85,6 +85,7 @@ Route::prefix('v1')->group(function () {
             // CU-11: Inscripciones
             Route::apiResource('inscripciones', InscripcionController::class)
                 ->only(['index', 'store', 'show', 'destroy']);
+            Route::patch('inscripciones/{id}/estado', [InscripcionController::class, 'actualizarEstado']);
 
             // CU-12: Docentes
             Route::get('docentes/buscar-ci', [DocenteController::class, 'buscarPorCI']);
