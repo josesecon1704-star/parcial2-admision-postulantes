@@ -3,7 +3,18 @@
 namespace App\Services;
 
 // DESTINO: app/Services/AuthService.php
+//
+// CAMBIOS:
+//   - login() ahora soporta DOS tipos de usuario:
+//       1) Personal administrativo (tbl_usuario): admin/secretaria/docente
+//          → email + password (hash) contra tbl_usuario
+//       2) Postulante (tbl_postulante): NO está en tbl_usuario
+//          → email (txt_correo) + password = txt_ci (texto plano)
+//   - El array devuelto incluye 'tipo' => 'administrativo' | 'postulante'
+//     para que AuthController arme la respuesta correcta y el frontend
+//     (login.blade.php) sepa a qué vista redirigir.
 
+use App\Models\Postulante;
 use App\Models\Usuario;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -15,30 +26,68 @@ class AuthService
     /**
      * Intentar login: valida credenciales y devuelve token JWT.
      *
-     * @return array{token: string, usuario: Usuario}|null
+     * Devuelve:
+     *   - tipo = 'administrativo' → ['tipo','token','usuario']
+     *   - tipo = 'postulante'     → ['tipo','token','postulante']
+     *   - null si no hay match en ninguna tabla
+     *
+     * @return array{tipo: string, token: string, usuario?: Usuario, postulante?: Postulante}|null
      */
     public function login(string $email, string $password): ?array
     {
-        // Buscar usuario activo por email
+        // ────────────────────────────────────────────────
+        // 1) Personal administrativo: tbl_usuario
+        // ────────────────────────────────────────────────
         $usuario = Usuario::where('txt_email', $email)
                           ->where('bol_estado', true)
                           ->first();
 
-        // Verificar existencia y contraseña
-        if (! $usuario || ! Hash::check($password, $usuario->txt_password)) {
-            return null;
+        if ($usuario && Hash::check($password, $usuario->txt_password)) {
+            $token = JWTAuth::fromUser($usuario);
+
+            $usuario->update(['fch_ultimo_acceso' => now()]);
+
+            return [
+                'tipo'    => 'administrativo',
+                'token'   => $token,
+                'usuario' => $usuario->load('rol'),
+            ];
         }
 
-        // Generar token JWT
-        $token = JWTAuth::fromUser($usuario);
+        // ────────────────────────────────────────────────
+        // 2) Postulante: tbl_postulante
+        //    NO tiene cuenta en tbl_usuario.
+        //    Contraseña = su CI (txt_ci), comparación directa.
+        // ────────────────────────────────────────────────
+        $postulante = Postulante::where('txt_correo', $email)->first();
 
-        // Registrar último acceso
-        $usuario->update(['fch_ultimo_acceso' => now()]);
+        if ($postulante && $this->ciCoincide($postulante->txt_ci, $password)) {
+            $token = JWTAuth::fromUser($postulante);
 
-        return [
-            'token'   => $token,
-            'usuario' => $usuario->load('rol'),
-        ];
+            return [
+                'tipo'       => 'postulante',
+                'token'      => $token,
+                'postulante' => $postulante,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Compara el CI del postulante con la contraseña ingresada.
+     * Normaliza espacios y mayúsculas/minúsculas para evitar
+     * fallos por formato (ej: "8765432 SC" vs "8765432sc").
+     */
+    private function ciCoincide(?string $ciAlmacenado, string $password): bool
+    {
+        if (! $ciAlmacenado) {
+            return false;
+        }
+
+        $normalizar = fn(string $v): string => strtoupper(preg_replace('/\s+/', '', $v));
+
+        return $normalizar($ciAlmacenado) === $normalizar($password);
     }
 
     /**
@@ -60,13 +109,23 @@ class AuthService
     }
 
     /**
-     * Devolver el usuario autenticado actualmente.
+     * Devolver el usuario o postulante autenticado actualmente.
+     * Distingue por el claim 'tipo' del token.
+     *
+     * @return array{tipo: string, data: Usuario|Postulante}
      */
-    public function me(): Usuario
+    public function me(): array
     {
-        /** @var \App\Models\Usuario $usuario */
-        $usuario = auth('api')->user();
-        return $usuario->load('rol');
+        $payload = JWTAuth::parseToken()->getPayload();
+        $tipo    = $payload->get('tipo', 'administrativo');
+
+        if ($tipo === 'postulante') {
+            $postulante = Postulante::find(auth('api')->id());
+            return ['tipo' => 'postulante', 'data' => $postulante];
+        }
+
+        $usuario = Usuario::find(auth('api')->id());
+        return ['tipo' => 'administrativo', 'data' => $usuario->load('rol')];
     }
 
     /**

@@ -5,7 +5,12 @@ namespace App\Http\Middleware;
 // ============================================================
 // DESTINO: app/Http/Middleware/JwtMiddleware.php
 //
-// Verifica el token JWT y además revisa bol_estado de tbl_usuario
+// Verifica el token JWT.
+//   - Si el token es de personal administrativo (tbl_usuario),
+//     además revisa bol_estado.
+//   - Si el token es de un postulante (claim 'tipo' === 'postulante'),
+//     tbl_postulante NO tiene bol_estado, así que se omite esa
+//     verificación.
 // ============================================================
 
 use Closure;
@@ -21,17 +26,21 @@ class JwtMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         try {
-            $usuario = JWTAuth::parseToken()->authenticate();
+            $payload = JWTAuth::parseToken()->getPayload();
+            $tipo    = $payload->get('tipo', 'administrativo');
 
-            if (! $usuario) {
+            $sujeto = JWTAuth::parseToken()->authenticate();
+
+            if (! $sujeto) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no encontrado.',
                 ], 404);
             }
 
-            // Verificar bol_estado (columna real de tbl_usuario)
-            if (! $usuario->bol_estado) {
+            // Verificar bol_estado SOLO para personal administrativo
+            // (tbl_postulante no tiene esa columna)
+            if ($tipo === 'administrativo' && ! $sujeto->bol_estado) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Tu cuenta está desactivada. Contacta al administrador.',

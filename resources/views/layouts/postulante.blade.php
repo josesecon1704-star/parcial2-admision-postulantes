@@ -396,7 +396,7 @@
     const token = localStorage.getItem('token');
     const idPostulante = localStorage.getItem('id_postulante');
 
-    if (!token || !idPostulante) {
+    if (!token) {
         window.location.href = '/login';
     }
 
@@ -476,23 +476,18 @@
     async function cargarTodo() {
         try {
             // 1. Datos del postulante (perfil + inscripción + grupo)
-            const resPost = await apiFetch(`/api/v1/postulantes/${idPostulante}`);
+            const resPost = await apiFetch(`/api/v1/postulante/me`);
             postulanteData = resPost.data;
 
             // 2. Evaluaciones / notas
-            const resEval = await apiFetch(`/api/v1/evaluaciones?id_postulante=${idPostulante}`);
+            const resEval = await apiFetch(`/api/v1/postulante/evaluaciones`);
             evaluacionesData = resEval.data || [];
 
             // 3. Horario del grupo (si tiene grupo asignado)
-            if (postulanteData.grupo?.id_grupo) {
-                try {
-                    const resGrupo = await apiFetch(`/api/v1/grupos/${postulanteData.grupo.id_grupo}`);
-                    grupoData = resGrupo.data;
-                } catch (e) {
-                    console.warn('No se pudo cargar el detalle del grupo:', e.message);
-                    grupoData = null;
-                }
-            }
+            const resHorario = await apiFetch(`/api/v1/postulante/horario`);
+            grupoData = resHorario.data?.grupo
+                ? { ...resHorario.data.grupo, horarios: resHorario.data.horarios }
+                : null;
 
             renderHeader();
             renderPerfil();

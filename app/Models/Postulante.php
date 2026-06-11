@@ -15,13 +15,21 @@ namespace App\Models;
 //   - requisitos()    → BelongsToMany via tbl_requisito_postulante
 //   - inscripciones() → HasMany via tbl_inscripcion
 //   - evaluaciones()  → HasMany via tbl_evaluacion
+//
+// NOVEDAD: implements JWTSubject
+//   El postulante NO está en tbl_usuario. Su "contraseña" es su CI
+//   (texto plano, comparado directamente — no hay columna de password).
+//   Login de postulante: AuthService::login() detecta por txt_correo
+//   cuando no hay match en tbl_usuario, valida CI === password
+//   y genera un JWT con claims custom { tipo: 'postulante', ... }.
 // ============================================================
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Postulante extends Model
+class Postulante extends Model implements JWTSubject
 {
     protected $table      = 'tbl_postulante';
     protected $primaryKey = 'id_postulante';
@@ -92,5 +100,30 @@ class Postulante extends Model
         return $this->fch_nacimiento
             ? $this->fch_nacimiento->age
             : 0;
+    }
+
+    // ════════════════════════════════════════════════════════
+    // JWT: requerido por tymon/jwt-auth (JWTSubject)
+    // ════════════════════════════════════════════════════════
+
+    public function getJWTIdentifier(): mixed
+    {
+        return $this->getKey(); // id_postulante
+    }
+
+    /**
+     * Claims custom para distinguir este token de uno de tbl_usuario.
+     * 'tipo' => 'postulante' es la clave que usan JwtMiddleware/CheckRole
+     * y el front (login.blade.php) para redirigir correctamente.
+     */
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            'tipo'          => 'postulante',
+            'rol'           => 'POSTULANTE',
+            'id_postulante' => $this->id_postulante,
+            'nombre'        => $this->txt_nombre,
+            'email'         => $this->txt_correo,
+        ];
     }
 }

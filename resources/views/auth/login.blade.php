@@ -10,7 +10,7 @@
 <body class="bg-slate-900 flex h-screen w-screen items-center justify-center font-sans antialiased text-slate-200">
 
     <div class="w-full max-w-md p-8 space-y-6 bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-xl">
-        
+
         <div class="text-center space-y-2">
             <div class="mx-auto h-12 w-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
                 <i data-lucide="graduation-cap" class="h-6 w-6"></i>
@@ -41,6 +41,7 @@
                     <input type="password" id="password" required placeholder="••••••••"
                         class="w-full pl-11 pr-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm">
                 </div>
+                <p class="text-[11px] text-slate-500 pl-1">Si eres postulante, tu contraseña es tu Cédula de Identidad (CI).</p>
             </div>
 
             <button type="submit" id="submitBtn"
@@ -93,25 +94,45 @@
         console.log("Respuesta de la API de la FICCT:", result);
 
         if (response.ok && result.success) {
-            
+
+            const data = result.data || {};
+
             // ── EXTRACCIÓN ULTRA PRECISA DEL TOKEN ANIDADO ──
             let tokenReal = null;
-            
-            if (result.data && result.data.token) {
-                // Si buildTokenResponse devolvió un objeto con access_token
-                tokenReal = result.data.token.access_token || result.data.token;
+
+            if (data.token) {
+                // buildTokenResponse() devuelve { access_token, token_type, expires_in }
+                tokenReal = data.token.access_token || data.token;
             }
-            
-            // Si el token extraído no es un string válido o está vacío
+
             if (!tokenReal || typeof tokenReal !== 'string') {
                 throw new Error("Estructura de token ilegible por el cliente web.");
             }
 
-            // Guardamos el string puro (ej: eyJhbG...) libre de objetos anidados
-            localStorage.setItem('token', tokenReal); 
+            // Guardamos el token puro (ej: eyJhbG...)
+            localStorage.setItem('token', tokenReal);
 
-            loginForm.reset(); 
-            window.location.href = '/prueba2'; 
+            // ── REDIRECCIÓN SEGÚN TIPO DE USUARIO ──────────
+            if (data.tipo === 'postulante') {
+                // Postulante: NO está en tbl_usuario.
+                // Guardamos su id para que postulante.blade.php
+                // pueda usarlo si lo necesita (aunque los endpoints
+                // /api/v1/postulante/* ya resuelven todo por el JWT).
+                localStorage.setItem('id_postulante', data.postulante.id_postulante);
+                localStorage.removeItem('rol');
+
+                loginForm.reset();
+                window.location.href = '/portal-postulante';
+
+            } else {
+                // Personal administrativo: ADMINISTRADOR / SECRETARIA / DOCENTE
+                localStorage.setItem('rol', data.usuario.rol);
+                localStorage.removeItem('id_postulante');
+
+                loginForm.reset();
+                window.location.href = '/prueba2';
+            }
+
         } else {
             throw new Error(result.message || 'Las credenciales no coinciden.');
         }

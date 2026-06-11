@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
 // DESTINO: app/Http/Controllers/Api/V1/AuthController.php
-// Crear carpeta Api/V1/ si no existe.
 //
-// Respuestas JSON usando nombres de columna reales:
-//   txt_username | txt_email | txt_nombre (del rol)
+// CAMBIOS:
+//   - login() ahora distingue 'administrativo' vs 'postulante'
+//     según lo que devuelva AuthService::login().
+//     El frontend (login.blade.php) usa 'data.tipo' para decidir
+//     a dónde redirigir:
+//       'administrativo' → /prueba2  (admin3.blade.php)
+//       'postulante'      → /portal-postulante (postulante.blade.php)
+//   - me() también distingue ambos tipos.
 // ============================================================
 
 use App\Http\Controllers\Controller;
@@ -26,7 +31,10 @@ class AuthController extends Controller
     // ──────────────────────────────────────────────────────
     // CU-01: Iniciar sesión
     // POST /api/v1/auth/login
-    // Body: { "email": "admin@ficct.edu.bo", "password": "..." }
+    // Body: { "txt_email": "...", "txt_password": "..." }
+    //
+    // Para personal administrativo (tbl_usuario): password = hash real
+    // Para postulantes (tbl_postulante): password = su CI (txt_ci)
     // ──────────────────────────────────────────────────────
     public function login(LoginRequest $request): JsonResponse
     {
@@ -42,19 +50,43 @@ class AuthController extends Controller
             ], 401);
         }
 
-        $usuario = $resultado['usuario'];
+        $token = $this->authService->buildTokenResponse($resultado['token']);
+
+        // ── Personal administrativo ─────────────────────────
+        if ($resultado['tipo'] === 'administrativo') {
+            $usuario = $resultado['usuario'];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sesión iniciada correctamente.',
+                'data'    => [
+                    'tipo'    => 'administrativo',
+                    'usuario' => [
+                        'id'        => $usuario->id_usuario,
+                        'username'  => $usuario->txt_username,
+                        'email'     => $usuario->txt_email,
+                        'rol'       => $usuario->rol->txt_nombre,
+                    ],
+                    'token' => $token,
+                ],
+            ], 200);
+        }
+
+        // ── Postulante ───────────────────────────────────────
+        $postulante = $resultado['postulante'];
 
         return response()->json([
             'success' => true,
             'message' => 'Sesión iniciada correctamente.',
             'data'    => [
-                'usuario' => [
-                    'id'        => $usuario->id_usuario,        // PK real
-                    'username'  => $usuario->txt_username,      // columna real
-                    'email'     => $usuario->txt_email,         // columna real
-                    'rol'       => $usuario->rol->txt_nombre,   // columna real de tbl_rol
+                'tipo'       => 'postulante',
+                'postulante' => [
+                    'id_postulante' => $postulante->id_postulante,
+                    'txt_nombre'    => $postulante->txt_nombre,
+                    'txt_ci'        => $postulante->txt_ci,
+                    'txt_correo'    => $postulante->txt_correo,
                 ],
-                'token' => $this->authService->buildTokenResponse($resultado['token']),
+                'token' => $token,
             ],
         ], 200);
     }
@@ -115,14 +147,34 @@ class AuthController extends Controller
     // CU-03: Perfil del usuario autenticado
     // GET /api/v1/auth/me
     // Header: Authorization: Bearer {token}
+    //
+    // Distingue 'administrativo' vs 'postulante' por el claim 'tipo'.
     // ──────────────────────────────────────────────────────
     public function me(): JsonResponse
     {
-        $usuario = $this->authService->me();
+        $resultado = $this->authService->me();
+
+        if ($resultado['tipo'] === 'postulante') {
+            $postulante = $resultado['data'];
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'tipo'          => 'postulante',
+                    'id_postulante' => $postulante->id_postulante,
+                    'nombre'        => $postulante->txt_nombre,
+                    'email'         => $postulante->txt_correo,
+                    'ci'            => $postulante->txt_ci,
+                ],
+            ], 200);
+        }
+
+        $usuario = $resultado['data'];
 
         return response()->json([
             'success' => true,
             'data'    => [
+                'tipo'          => 'administrativo',
                 'id'            => $usuario->id_usuario,
                 'username'      => $usuario->txt_username,
                 'email'         => $usuario->txt_email,
@@ -132,4 +184,5 @@ class AuthController extends Controller
             ],
         ], 200);
     }
+    
 }
