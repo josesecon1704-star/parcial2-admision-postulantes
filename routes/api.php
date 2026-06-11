@@ -38,6 +38,7 @@ Route::prefix('v1')->group(function () {
 // ── DIAGNÓSTICO TEMPORAL — BORRAR DESPUÉS ───────────────
     Route::get('debug/auth-config', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkAuthConfig']);
     Route::get('debug/postulante/{id}', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkPostulante']);
+    Route::get('debug/token', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkToken']);
     // ════════════════════════════════════════════════════════
     // RUTAS PROTEGIDAS
     // ════════════════════════════════════════════════════════
