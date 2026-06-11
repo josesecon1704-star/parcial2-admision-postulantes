@@ -23,6 +23,7 @@ use App\Models\Evaluacion;
 use App\Models\Postulante;
 use App\Services\PostulanteService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PostulanteSelfController extends Controller
 {
@@ -31,13 +32,26 @@ class PostulanteSelfController extends Controller
     ) {}
 
     /**
+     * Obtiene el postulante autenticado desde el atributo que
+     * JwtMiddleware dejó en el request — NO vuelve a llamar al
+     * guard JWT (auth('api_postulante')->id() lanza
+     * UserNotFoundException sin capturar si se invoca de nuevo
+     * tras la autenticación inicial del middleware).
+     */
+    private function postulanteActual(Request $request): ?Postulante
+    {
+        $sujeto = $request->attributes->get('auth_sujeto');
+        return $sujeto instanceof Postulante ? $sujeto : null;
+    }
+
+    /**
      * GET /api/v1/postulante/me
      * Mismo formato que PostulanteController::show(), pero
      * solo para el postulante autenticado.
      */
-    public function me(): JsonResponse
+    public function me(Request $request): JsonResponse
     {
-        $postulante = Postulante::find(auth('api_postulante')->id());
+        $postulante = $this->postulanteActual($request);
 
         if (! $postulante) {
             return response()->json([
@@ -60,9 +74,9 @@ class PostulanteSelfController extends Controller
      * Si el postulante aún no tiene grupo asignado (id_grupo null
      * en su última inscripción), 'grupo' viene null.
      */
-    public function horario(): JsonResponse
+    public function horario(Request $request): JsonResponse
     {
-        $postulante = Postulante::find(auth('api_postulante')->id());
+        $postulante = $this->postulanteActual($request);
 
         if (! $postulante) {
             return response()->json([
@@ -131,9 +145,9 @@ class PostulanteSelfController extends Controller
      * Mismo formato que EvaluacionController::index(), pero
      * solo para el postulante autenticado (sin parámetro id_postulante).
      */
-    public function evaluaciones(): JsonResponse
+    public function evaluaciones(Request $request): JsonResponse
     {
-        $postulante = Postulante::find(auth('api_postulante')->id());
+        $postulante = $this->postulanteActual($request);
 
         if (! $postulante) {
             return response()->json([
