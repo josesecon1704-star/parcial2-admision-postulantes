@@ -5,6 +5,10 @@ namespace App\Http\Middleware;
 // DESTINO: app/Http/Middleware/CheckRole.php
 //
 // CAMBIOS:
+//   - auth($guard)->user() puede lanzar UserNotFoundException
+//     (mensaje "User not found") si el JWTGuard intenta re-resolver
+//     el usuario y algo falla. Se envuelve en try/catch para evitar
+//     que esa excepción se propague como error genérico sin manejar.
 //   - Lee el claim 'tipo' del token para elegir el guard correcto:
 //       'postulante'    -> auth('api_postulante')->user()  (rol virtual POSTULANTE)
 //       administrativo  -> auth('api')->user() + tbl_rol (igual que antes)
@@ -26,12 +30,22 @@ class CheckRole
         $payload = JWTAuth::parseToken()->getPayload();
         $tipo    = $payload->get('tipo', 'administrativo');
 
-        if ($tipo === 'postulante') {
-            $sujeto    = auth('api_postulante')->user();
-            $rolSujeto = 'POSTULANTE';
-        } else {
-            $sujeto    = auth('api')->user();
-            $rolSujeto = $sujeto?->rol?->txt_nombre;
+        try {
+            if ($tipo === 'postulante') {
+                $id        = auth('api_postulante')->id();
+                $sujeto    = $id ? \App\Models\Postulante::find($id) : null;
+                $rolSujeto = 'POSTULANTE';
+            } else {
+                $id        = auth('api')->id();
+                $sujeto    = $id ? \App\Models\Usuario::with('rol')->find($id) : null;
+                $rolSujeto = $sujeto?->rol?->txt_nombre;
+            }
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autenticado.',
+                'debug'   => $e->getMessage(),
+            ], 401);
         }
 
         if (! $sujeto) {
