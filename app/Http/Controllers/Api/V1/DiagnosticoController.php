@@ -132,4 +132,6 @@ class DiagnosticoController extends Controller
             'jwt_middleware_class_exists' => class_exists(\App\Http\Middleware\JwtMiddleware::class),
         ]);
     }
+
+    
 }
