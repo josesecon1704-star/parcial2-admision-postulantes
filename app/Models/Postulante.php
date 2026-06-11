@@ -16,20 +16,27 @@ namespace App\Models;
 //   - inscripciones() → HasMany via tbl_inscripcion
 //   - evaluaciones()  → HasMany via tbl_evaluacion
 //
-// NOVEDAD: implements JWTSubject
+// NOVEDAD: extends Authenticatable + implements JWTSubject
+//   El guard JWT (api_postulante) requiere que el modelo cumpla
+//   el contrato Illuminate\Contracts\Auth\Authenticatable
+//   (getAuthIdentifierName, getAuthIdentifier, getAuthPassword, etc.).
+//   Eso lo provee la clase base Authenticatable de Laravel — igual
+//   que hace App\Models\Usuario.
+//
 //   El postulante NO está en tbl_usuario. Su "contraseña" es su CI
-//   (texto plano, comparado directamente — no hay columna de password).
+//   (texto plano, comparado directamente — no hay columna de password,
+//   por eso getAuthPassword() devuelve '' y nunca se usa para Hash::check).
 //   Login de postulante: AuthService::login() detecta por txt_correo
 //   cuando no hay match en tbl_usuario, valida CI === password
 //   y genera un JWT con claims custom { tipo: 'postulante', ... }.
 // ============================================================
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Postulante extends Model implements JWTSubject
+class Postulante extends Authenticatable implements JWTSubject
 {
     protected $table      = 'tbl_postulante';
     protected $primaryKey = 'id_postulante';
@@ -100,6 +107,27 @@ class Postulante extends Model implements JWTSubject
         return $this->fch_nacimiento
             ? $this->fch_nacimiento->age
             : 0;
+    }
+
+    // ════════════════════════════════════════════════════════
+    // Authenticatable: requerido por el guard JWT (api_postulante)
+    // ════════════════════════════════════════════════════════
+
+    /**
+     * tbl_postulante no tiene columna de contraseña real.
+     * El "password" (CI) se valida manualmente en AuthService::login()
+     * comparando contra txt_ci, NO vía Hash::check ni este método.
+     * Se sobreescribe para evitar que Eloquent intente leer una
+     * columna 'password' inexistente.
+     */
+    public function getAuthPassword(): string
+    {
+        return '';
+    }
+
+    public function getAuthIdentifierName(): string
+    {
+        return 'id_postulante';
     }
 
     // ════════════════════════════════════════════════════════
