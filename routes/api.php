@@ -138,7 +138,7 @@ Route::prefix('v1')->group(function () {
         });
     });
 });
-
+Route::get('debug/double-auth', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkDoubleAuth']);
 Route::fallback(fn() => response()->json([
     'success' => false,
     'message' => 'Endpoint no encontrado.',

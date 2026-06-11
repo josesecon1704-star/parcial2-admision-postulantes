@@ -173,4 +173,73 @@ class DiagnosticoController extends Controller
         return response()->json($resultado);
     }
 
+
+    public function checkDoubleAuth(): JsonResponse
+    {
+        $resultado = [];
+
+        try {
+            /** @var \Tymon\JWTAuth\JWTGuard $guard1 */
+            $guard1 = auth('api_postulante');
+            $first = $guard1->authenticate();
+            $resultado['first_call'] = [
+                'success' => true,
+                'class'   => get_class($first),
+            ];
+        } catch (\Throwable $e) {
+            $resultado['first_call'] = [
+                'success' => false,
+                'error'   => get_class($e) . ': ' . $e->getMessage(),
+            ];
+        }
+
+        try {
+            /** @var \Tymon\JWTAuth\JWTGuard $guard2 */
+            $guard2 = auth('api_postulante');
+            $second = $guard2->authenticate();
+            $resultado['second_call'] = [
+                'success' => true,
+                'class'   => get_class($second),
+            ];
+        } catch (\Throwable $e) {
+            $resultado['second_call'] = [
+                'success' => false,
+                'error'   => get_class($e) . ': ' . $e->getMessage(),
+            ];
+        }
+
+        // Simular: primero 'api' (default), luego 'api_postulante'
+        try {
+            /** @var \Tymon\JWTAuth\JWTGuard $guardApi */
+            $guardApi = auth('api');
+            $resultApi = $guardApi->authenticate();
+            $resultado['api_then_postulante']['api'] = [
+                'success' => true,
+                'class'   => get_class($resultApi),
+            ];
+        } catch (\Throwable $e) {
+            $resultado['api_then_postulante']['api'] = [
+                'success' => false,
+                'error'   => get_class($e) . ': ' . $e->getMessage(),
+            ];
+        }
+
+        try {
+            /** @var \Tymon\JWTAuth\JWTGuard $guardPost */
+            $guardPost = auth('api_postulante');
+            $resultPost = $guardPost->authenticate();
+            $resultado['api_then_postulante']['postulante'] = [
+                'success' => true,
+                'class'   => get_class($resultPost),
+            ];
+        } catch (\Throwable $e) {
+            $resultado['api_then_postulante']['postulante'] = [
+                'success' => false,
+                'error'   => get_class($e) . ': ' . $e->getMessage(),
+            ];
+        }
+
+        return response()->json($resultado);
+    }
+
 }
