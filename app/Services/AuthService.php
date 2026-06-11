@@ -2,17 +2,26 @@
 
 namespace App\Services;
 
-// DESTINO: app/Services/AuthService.php
+// DESTINO: app/Services/AuthService.php  (REEMPLAZAR)
 //
-// CAMBIOS:
-//   - login() ahora soporta DOS tipos de usuario:
-//       1) Personal administrativo (tbl_usuario): admin/secretaria/docente
-//          → email + password (hash) contra tbl_usuario
-//       2) Postulante (tbl_postulante): NO está en tbl_usuario
-//          → email (txt_correo) + password = txt_ci (texto plano)
-//   - El array devuelto incluye 'tipo' => 'administrativo' | 'postulante'
-//     para que AuthController arme la respuesta correcta y el frontend
-//     (login.blade.php) sepa a qué vista redirigir.
+// REDISEÑO DEL LOGIN DE POSTULANTE:
+//   - Personal administrativo (tbl_usuario) sigue usando
+//     tymon/jwt-auth + guard 'api' (Authenticatable real), sin cambios.
+//   - Postulante (tbl_postulante) YA NO usa JWTAuth::fromUser() ni
+//     ningún guard de Laravel. Se genera un JWT propio, simple,
+//     firmado con la misma JWT_SECRET, usando lcobucci/jwt
+//     directamente (ya viene como dependencia de tymon/jwt-auth).
+//
+//     Esto evita por completo los guards/providers/blacklist de
+//     tymon, que causaban "User not found" al re-autenticar el
+//     mismo token más de una vez en el ciclo de la request.
+//
+//   El token de postulante lleva los claims:
+//     sub  = id_postulante
+//     tipo = 'postulante'
+//     iat, exp (1 hora, igual que JWT_TTL)
+//
+//   PostulanteJwtMiddleware decodifica este token manualmente.
 
 use App\Models\Postulante;
 use App\Models\Usuario;
@@ -20,23 +29,30 @@ use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Lcobucci\JWT\Configuration;
+use Lcobucci\JWT\Signer\Hmac\Sha256;
+use Lcobucci\JWT\Signer\Key\InMemory;
+use Lcobucci\JWT\Token\Builder;
+use Lcobucci\JWT\Validation\Constraint\SignedWith;
+use Lcobucci\JWT\Validation\Constraint\ValidAt;
+use Lcobucci\Clock\SystemClock;
+use DateTimeImmutable;
+use DateTimeZone;
 
 class AuthService
 {
     /**
-     * Intentar login: valida credenciales y devuelve token JWT.
+     * Intentar login: valida credenciales y devuelve token.
      *
      * Devuelve:
-     *   - tipo = 'administrativo' → ['tipo','token','usuario']
-     *   - tipo = 'postulante'     → ['tipo','token','postulante']
+     *   - tipo = 'administrativo' → ['tipo','token','usuario']  (token = string JWT de tymon)
+     *   - tipo = 'postulante'     → ['tipo','token','postulante'] (token = string JWT propio, lcobucci)
      *   - null si no hay match en ninguna tabla
-     *
-     * @return array{tipo: string, token: string, usuario?: Usuario, postulante?: Postulante}|null
      */
     public function login(string $email, string $password): ?array
     {
         // ────────────────────────────────────────────────
-        // 1) Personal administrativo: tbl_usuario
+        // 1) Personal administrativo: tbl_usuario (sin cambios)
         // ────────────────────────────────────────────────
         $usuario = Usuario::where('txt_email', $email)
                           ->where('bol_estado', true)
@@ -56,13 +72,13 @@ class AuthService
 
         // ────────────────────────────────────────────────
         // 2) Postulante: tbl_postulante
-        //    NO tiene cuenta en tbl_usuario.
         //    Contraseña = su CI (txt_ci), comparación directa.
+        //    Token propio firmado con lcobucci/jwt (SIN guards).
         // ────────────────────────────────────────────────
         $postulante = Postulante::where('txt_correo', $email)->first();
 
         if ($postulante && $this->ciCoincide($postulante->txt_ci, $password)) {
-            $token = JWTAuth::fromUser($postulante);
+            $token = $this->generarTokenPostulante($postulante);
 
             return [
                 'tipo'       => 'postulante',
@@ -75,9 +91,80 @@ class AuthService
     }
 
     /**
+     * Genera un JWT simple para el postulante, firmado con JWT_SECRET
+     * usando lcobucci/jwt directamente (sin pasar por guards de Laravel).
+     *
+     * Claims:
+     *   sub  = id_postulante (string)
+     *   tipo = 'postulante'
+     *   iat  = ahora
+     *   exp  = ahora + JWT_TTL minutos
+     */
+    public function generarTokenPostulante(Postulante $postulante): string
+    {
+        $config = $this->jwtConfig();
+        $now    = new DateTimeImmutable();
+        $ttlMin = (int) config('jwt.ttl', 60);
+
+        $token = $config->builder()
+            ->issuedAt($now)
+            ->expiresAt($now->modify("+{$ttlMin} minutes"))
+            ->relatedTo((string) $postulante->id_postulante)
+            ->withClaim('tipo', 'postulante')
+            ->getToken($config->signer(), $config->signingKey());
+
+        return $token->toString();
+    }
+
+    /**
+     * Decodifica y valida un token de postulante.
+     * Devuelve el id_postulante (int) o null si es inválido/expirado.
+     */
+    public function validarTokenPostulante(string $tokenString): ?int
+    {
+        $config = $this->jwtConfig();
+
+        try {
+            $token = $config->parser()->parse($tokenString);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $constraints = [
+            new SignedWith($config->signer(), $config->signingKey()),
+            new ValidAt(SystemClock::fromUTC()),
+        ];
+
+        if (! $config->validator()->validate($token, ...$constraints)) {
+            return null;
+        }
+
+        /** @var \Lcobucci\JWT\Token\Plain $token */
+        $claims = $token->claims();
+
+        if ($claims->get('tipo') !== 'postulante') {
+            return null;
+        }
+
+        $sub = $claims->get('sub');
+        return $sub !== null ? (int) $sub : null;
+    }
+
+    /**
+     * Configuración compartida de lcobucci/jwt usando JWT_SECRET.
+     */
+    private function jwtConfig(): Configuration
+    {
+        $secret = config('jwt.secret');
+
+        return Configuration::forSymmetricSigner(
+            new Sha256(),
+            InMemory::plainText($secret)
+        );
+    }
+
+    /**
      * Compara el CI del postulante con la contraseña ingresada.
-     * Normaliza espacios y mayúsculas/minúsculas para evitar
-     * fallos por formato (ej: "8765432 SC" vs "8765432sc").
      */
     private function ciCoincide(?string $ciAlmacenado, string $password): bool
     {
@@ -91,7 +178,8 @@ class AuthService
     }
 
     /**
-     * Invalidar el token actual (logout).
+     * Invalidar el token actual (logout) — solo aplica a tymon (administrativo).
+     * El portal de postulante simplemente descarta el token en el cliente.
      */
     public function logout(): void
     {
@@ -99,7 +187,7 @@ class AuthService
     }
 
     /**
-     * Renovar el token antes de que expire.
+     * Renovar el token antes de que expire (solo administrativo).
      *
      * @throws TokenExpiredException|TokenInvalidException
      */
@@ -109,21 +197,11 @@ class AuthService
     }
 
     /**
-     * Devolver el usuario o postulante autenticado actualmente.
-     * Distingue por el claim 'tipo' del token.
-     *
-     * @return array{tipo: string, data: Usuario|Postulante}
+     * Devolver el usuario autenticado actualmente (solo administrativo,
+     * usado por AuthController::me() en /api/v1/auth/me).
      */
     public function me(): array
     {
-        $payload = JWTAuth::parseToken()->getPayload();
-        $tipo    = $payload->get('tipo', 'administrativo');
-
-        if ($tipo === 'postulante') {
-            $postulante = Postulante::find(auth('api_postulante')->id());
-            return ['tipo' => 'postulante', 'data' => $postulante];
-        }
-
         $usuario = Usuario::find(auth('api')->id());
         return ['tipo' => 'administrativo', 'data' => $usuario->load('rol')];
     }

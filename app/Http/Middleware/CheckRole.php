@@ -4,22 +4,15 @@ namespace App\Http\Middleware;
 
 // DESTINO: app/Http/Middleware/CheckRole.php
 //
-// CAMBIOS:
-//   - Ya NO vuelve a llamar a JWTAuth::parseToken() ni a
-//     auth($guard)->authenticate()/id(). Esa segunda llamada al
-//     guard, dentro de un segundo middleware, lanzaba
-//     UserNotFoundException sin capturar (visible como
-//     {"message":"User not found"} con 401), aunque el primer
-//     middleware (JwtMiddleware) ya había autenticado correctamente.
-//   - En su lugar, reutiliza $request->attributes 'auth_tipo' y
-//     'auth_sujeto' que JwtMiddleware deja seteados tras autenticar
-//     con éxito. JwtMiddleware SIEMPRE corre antes (está primero
-//     en el grupo de middleware de las rutas protegidas).
+// Versión simplificada: solo personal administrativo.
+// Reutiliza $request->attributes 'auth_sujeto' que JwtMiddleware
+// deja seteado tras autenticar con éxito (sin volver a tocar el
+// guard JWT).
 //
-// Uso en rutas (sin cambios):
+// Uso en rutas:
 //   ->middleware('role:ADMINISTRADOR')
 //   ->middleware('role:ADMINISTRADOR,SECRETARIA')
-//   ->middleware('role:POSTULANTE')
+//   ->middleware('role:DOCENTE')
 
 use Closure;
 use Illuminate\Http\Request;
@@ -29,7 +22,6 @@ class CheckRole
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        $tipo   = $request->attributes->get('auth_tipo');
         $sujeto = $request->attributes->get('auth_sujeto');
 
         if (! $sujeto) {
@@ -39,9 +31,7 @@ class CheckRole
             ], 401);
         }
 
-        $rolSujeto = $tipo === 'postulante'
-            ? 'POSTULANTE'
-            : $sujeto->rol?->txt_nombre;
+        $rolSujeto = $sujeto->rol?->txt_nombre;
 
         if (! in_array($rolSujeto, $roles, true)) {
             return response()->json([

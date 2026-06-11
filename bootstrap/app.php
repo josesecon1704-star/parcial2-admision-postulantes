@@ -1,5 +1,11 @@
 <?php
 
+// DESTINO: bootstrap/app.php (REEMPLAZAR)
+//
+// CAMBIO: se agrega el alias 'postulante.jwt' apuntando al
+// nuevo PostulanteJwtMiddleware (login/validación manual con
+// lcobucci/jwt, sin guards de Laravel).
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,16 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            // ── CAMBIO CLAVE ─────────────────────────────────
-            // Antes apuntaba a Tymon\JWTAuth\Http\Middleware\Authenticate,
-            // que SIEMPRE usa el guard por defecto ('api' -> tbl_usuario)
-            // y por eso fallaba con "User not found" para postulantes
-            // (sub apunta a tbl_postulante).
-            //
-            // Nuestro JwtMiddleware lee el claim 'tipo' del token y
-            // autentica con 'api_postulante' o 'api' según corresponda.
+            // Personal administrativo (admin/secretaria/docente) — tymon/jwt-auth + guard 'api'
             'jwt.auth' => \App\Http\Middleware\JwtMiddleware::class,
             'role'     => \App\Http\Middleware\CheckRole::class,
+
+            // Portal del postulante — JWT propio (lcobucci/jwt), SIN guards
+            'postulante.jwt' => \App\Http\Middleware\PostulanteJwtMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
