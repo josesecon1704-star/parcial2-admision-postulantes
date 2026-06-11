@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Postulante;
 use Illuminate\Http\JsonResponse;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class DiagnosticoController extends Controller
 {
@@ -40,5 +41,63 @@ class DiagnosticoController extends Controller
             'tabla'                 => $postulante?->getTable(),
             'primary_key'           => $postulante?->getKeyName(),
         ]);
+    }
+
+    /**
+     * Recibe el token vía header Authorization: Bearer {token}
+     * y prueba authenticate() contra ambos guards, capturando
+     * cualquier excepción para ver el error real.
+     */
+    public function checkToken(): JsonResponse
+    {
+        $resultado = [
+            'payload' => null,
+            'guard_api_postulante' => null,
+            'guard_api'            => null,
+        ];
+
+        // 1. Leer el payload crudo del token
+        try {
+            $payload = JWTAuth::parseToken()->getPayload();
+            $resultado['payload'] = $payload->toArray();
+        } catch (\Throwable $e) {
+            $resultado['payload_error'] = get_class($e) . ': ' . $e->getMessage();
+        }
+
+        // 2. Probar authenticate() con guard api_postulante
+        try {
+            /** @var \Tymon\JWTAuth\JWTGuard $guard */
+            $guard = auth('api_postulante');
+            $sujeto = $guard->authenticate();
+            $resultado['guard_api_postulante'] = [
+                'success' => true,
+                'class'   => $sujeto ? get_class($sujeto) : null,
+                'id'      => $sujeto?->getAuthIdentifier(),
+            ];
+        } catch (\Throwable $e) {
+            $resultado['guard_api_postulante'] = [
+                'success' => false,
+                'error'   => get_class($e) . ': ' . $e->getMessage(),
+            ];
+        }
+
+        // 3. Probar authenticate() con guard api
+        try {
+            /** @var \Tymon\JWTAuth\JWTGuard $guard */
+            $guard = auth('api');
+            $sujeto = $guard->authenticate();
+            $resultado['guard_api'] = [
+                'success' => true,
+                'class'   => $sujeto ? get_class($sujeto) : null,
+                'id'      => $sujeto?->getAuthIdentifier(),
+            ];
+        } catch (\Throwable $e) {
+            $resultado['guard_api'] = [
+                'success' => false,
+                'error'   => get_class($e) . ': ' . $e->getMessage(),
+            ];
+        }
+
+        return response()->json($resultado);
     }
 }
