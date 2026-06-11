@@ -102,29 +102,62 @@ class PostulanteSelfController extends Controller
             ], 200);
         }
 
-        // Cargar aulas asociadas a cada horario (pivote tbl_grupo_horario.id_aula)
-        $horarios = $grupo->horarios->map(function ($h) {
-            $aula = $h->pivot->id_aula
-                ? \App\Models\Aula::find($h->pivot->id_aula)
-                : null;
+        // ── Asignaciones de materia/docente del grupo, en orden ──
+        // tbl_grupo_horario no tiene FK directa a materia, así que
+        // emparejamos por posición: el bloque N de cada día (ordenado
+        // por hora) corresponde a la asignación N (ordenada por
+        // id_asignacion) del grupo.
+        $asignaciones = \App\Models\AsignacionDocente::with(['materia', 'docente'])
+            ->where('id_grupo', $grupo->id_grupo)
+            ->orderBy('id_asignacion')
+            ->get()
+            ->values();
 
-            return [
-                'id_horario'     => $h->id_horario,
-                'txt_dia_semana' => $h->txt_dia_semana,
-                'tm_hora_inicio' => $h->tm_hora_inicio,
-                'tm_hora_final'  => $h->tm_hora_final,
-                'turno'          => $h->turno ? [
-                    'id_turno'   => $h->turno->id_turno,
-                    'txt_nombre' => $h->turno->txt_nombre,
-                ] : null,
-                'id_aula'        => $h->pivot->id_aula,
-                'aula'           => $aula ? [
-                    'id_aula'      => $aula->id_aula,
-                    'int_piso'     => $aula->int_piso,
-                    'txt_nro_aula' => $aula->txt_nro_aula,
-                ] : null,
-            ];
-        });
+        // Agrupar los horarios del grupo por día, ordenados por hora,
+        // para asignar el número de bloque (0,1,2,3...) dentro del día.
+        $porDia = $grupo->horarios
+            ->sortBy('tm_hora_inicio')
+            ->groupBy('txt_dia_semana');
+
+        $horarios = collect();
+
+        foreach ($porDia as $dia => $items) {
+            $bloque = 0;
+            foreach ($items->sortBy('tm_hora_inicio') as $h) {
+                $aula = $h->pivot->id_aula
+                    ? \App\Models\Aula::find($h->pivot->id_aula)
+                    : null;
+
+                $asignacion = $asignaciones->get($bloque);
+
+                $horarios->push([
+                    'id_horario'     => $h->id_horario,
+                    'txt_dia_semana' => $h->txt_dia_semana,
+                    'tm_hora_inicio' => $h->tm_hora_inicio,
+                    'tm_hora_final'  => $h->tm_hora_final,
+                    'turno'          => $h->turno ? [
+                        'id_turno'   => $h->turno->id_turno,
+                        'txt_nombre' => $h->turno->txt_nombre,
+                    ] : null,
+                    'id_aula'        => $h->pivot->id_aula,
+                    'aula'           => $aula ? [
+                        'id_aula'      => $aula->id_aula,
+                        'int_piso'     => $aula->int_piso,
+                        'txt_nro_aula' => $aula->txt_nro_aula,
+                    ] : null,
+                    'materia' => $asignacion?->materia ? [
+                        'id_materia' => $asignacion->materia->id_materia,
+                        'txt_nombre' => $asignacion->materia->txt_nombre,
+                    ] : null,
+                    'docente' => $asignacion?->docente ? [
+                        'id_docente' => $asignacion->docente->id_docente,
+                        'txt_nombre' => $asignacion->docente->txt_nombre,
+                    ] : null,
+                ]);
+
+                $bloque++;
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -135,7 +168,7 @@ class PostulanteSelfController extends Controller
                     'int_cantidad_estudiantes' => $grupo->int_cantidad_estudiantes,
                     'int_capacidad_maxma'      => $grupo->int_capacidad_maxma,
                 ],
-                'horarios' => $horarios,
+                'horarios' => $horarios->values(),
             ],
         ], 200);
     }
