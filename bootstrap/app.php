@@ -13,7 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+            // ── CAMBIO CLAVE ─────────────────────────────────
+            // Antes apuntaba a Tymon\JWTAuth\Http\Middleware\Authenticate,
+            // que SIEMPRE usa el guard por defecto ('api' -> tbl_usuario)
+            // y por eso fallaba con "User not found" para postulantes
+            // (sub apunta a tbl_postulante).
+            //
+            // Nuestro JwtMiddleware lee el claim 'tipo' del token y
+            // autentica con 'api_postulante' o 'api' según corresponda.
+            'jwt.auth' => \App\Http\Middleware\JwtMiddleware::class,
             'role'     => \App\Http\Middleware\CheckRole::class,
         ]);
     })
