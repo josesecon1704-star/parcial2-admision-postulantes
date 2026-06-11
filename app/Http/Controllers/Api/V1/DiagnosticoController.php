@@ -242,4 +242,72 @@ class DiagnosticoController extends Controller
         return response()->json($resultado);
     }
 
+    public function jwtPasoAPaso(): \Illuminate\Http\JsonResponse
+    {
+        $resultado = [];
+
+        // PASO 1: parseToken
+        try {
+            $token = \Tymon\JWTAuth\Facades\JWTAuth::parseToken();
+            $resultado['paso1_parseToken'] = 'OK';
+        } catch (\Throwable $e) {
+            $resultado['paso1_parseToken'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+            return response()->json($resultado);
+        }
+
+        // PASO 2: getPayload
+        try {
+            $payload = $token->getPayload();
+            $resultado['paso2_getPayload'] = 'OK';
+            $resultado['payload_tipo'] = $payload->get('tipo');
+            $resultado['payload_sub']  = $payload->get('sub');
+        } catch (\Throwable $e) {
+            $resultado['paso2_getPayload'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+            return response()->json($resultado);
+        }
+
+        // PASO 3: getToken
+        try {
+            $rawToken = \Tymon\JWTAuth\Facades\JWTAuth::getToken();
+            $resultado['paso3_getToken'] = 'OK';
+        } catch (\Throwable $e) {
+            $resultado['paso3_getToken'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+            return response()->json($resultado);
+        }
+
+        // PASO 4: auth('api_postulante') — obtener instancia del guard
+        try {
+            /** @var \Tymon\JWTAuth\JWTGuard $guard */
+            $guard = auth('api_postulante');
+            $resultado['paso4_guard'] = 'OK - clase: ' . get_class($guard);
+        } catch (\Throwable $e) {
+            $resultado['paso4_guard'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+            return response()->json($resultado);
+        }
+
+        // PASO 5: setToken
+        try {
+            $guard = $guard->setToken($rawToken);
+            $resultado['paso5_setToken'] = 'OK';
+        } catch (\Throwable $e) {
+            $resultado['paso5_setToken'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+            return response()->json($resultado);
+        }
+
+        // PASO 6: authenticate
+        try {
+            $sujeto = $guard->authenticate();
+            $resultado['paso6_authenticate'] = $sujeto
+                ? 'OK - id_postulante: ' . $sujeto->id_postulante
+                : 'OK pero retornó null';
+        } catch (\Throwable $e) {
+            $resultado['paso6_authenticate'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+            $resultado['trace'] = collect($e->getTrace())->take(5)->map(
+                fn($t) => ($t['class'] ?? '') . ($t['type'] ?? '') . ($t['function'] ?? '') . ' @ ' . ($t['file'] ?? '?') . ':' . ($t['line'] ?? '?')
+            );
+            return response()->json($resultado);
+        }
+
+        return response()->json($resultado);
+    }
 }
