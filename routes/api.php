@@ -1,8 +1,7 @@
 <?php
 
 // ============================================================
-// DESTINO: routes/api.php  — CICLO 1 COMPLETO
-// Todos los CU-01 al CU-20 registrados
+// DESTINO: routes/api.php  — CICLO 1 + PORTAL DEL POSTULANTE
 // ============================================================
 
 use App\Http\Controllers\Api\V1\AuthController;
@@ -15,6 +14,7 @@ use App\Http\Controllers\Api\V1\HorarioController;
 use App\Http\Controllers\Api\V1\InscripcionController;
 use App\Http\Controllers\Api\V1\MateriaController;
 use App\Http\Controllers\Api\V1\PostulanteController;
+use App\Http\Controllers\Api\V1\PostulanteSelfController;
 use App\Http\Controllers\Api\V1\ProfesionController;
 use App\Http\Controllers\Api\V1\RolController;
 use App\Http\Controllers\Api\V1\TurnoController;
@@ -108,6 +108,26 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:DOCENTE')->group(function () {
             // CU-13: Carga horaria propia
             Route::get('docentes/mi-carga', [DocenteController::class, 'miCarga']);
+        });
+
+        // ════════════════════════════════════════════════════
+        // ── Solo POSTULANTE ──────────────────────────────────
+        // Portal de autoservicio (postulante.blade.php)
+        // Todos estos endpoints resuelven el id_postulante desde
+        // el claim del JWT (auth('api')->user()->id_postulante),
+        // NUNCA desde un parámetro de la URL — así un postulante
+        // jamás puede ver datos de otro.
+        // ════════════════════════════════════════════════════
+        Route::middleware('role:POSTULANTE')->prefix('postulante')->group(function () {
+            // Perfil + inscripción + carreras + grupo (mismo formato
+            // que PostulanteService::formatear(conRelaciones: true))
+            Route::get('me', [PostulanteSelfController::class, 'me']);
+
+            // Horario semanal del grupo asignado (días, horas, turno, aula)
+            Route::get('horario', [PostulanteSelfController::class, 'horario']);
+
+            // Exámenes (1/2/3) con notas por materia
+            Route::get('evaluaciones', [PostulanteSelfController::class, 'evaluaciones']);
         });
     });
 });

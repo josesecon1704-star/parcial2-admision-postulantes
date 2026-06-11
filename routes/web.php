@@ -18,6 +18,13 @@ Route::get('/prueba2', function () {
     return view('layouts.admin3');
 });
 
+// Ruta 3: Portal del Postulante (postulante.blade.php)
+// El control de acceso real ocurre en el frontend (token + id_postulante
+// en localStorage) y en la API (middleware role:POSTULANTE).
+Route::get('/portal-postulante', function () {
+    return view('layouts.postulante');
+});
+
 // Redirección por defecto
 Route::get('/', function () {
     return redirect('/login');
