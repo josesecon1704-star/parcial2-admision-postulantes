@@ -35,11 +35,13 @@ Route::prefix('v1')->group(function () {
             Route::get('/me',       [AuthController::class, 'me'])->name('me');
         });
     });
-// ── DIAGNÓSTICO TEMPORAL — BORRAR DESPUÉS ───────────────
+    // ── DIAGNÓSTICO TEMPORAL — BORRAR DESPUÉS ───────────────
     Route::get('debug/auth-config', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkAuthConfig']);
     Route::get('debug/postulante/{id}', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkPostulante']);
     Route::get('debug/token', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkToken']);
     Route::get('debug/middleware', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkMiddlewareAlias']);
+    Route::get('debug/bootstrap-file', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkBootstrapFile']);
+    Route::get('debug/route-middleware', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkRouteMiddleware']);
     // ════════════════════════════════════════════════════════
     // RUTAS PROTEGIDAS
     // ════════════════════════════════════════════════════════
