@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body class="bg-slate-900 text-slate-100 font-sans antialiased flex h-screen w-screen overflow-hidden">
 
     <!-- ══════════════════════════════════════════════════════════
@@ -244,15 +246,24 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 flex items-center gap-5 shadow-lg">
                             <div class="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0"><i data-lucide="users" class="h-5 w-5"></i></div>
-                            <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Mi Grupo</p><p id="h-grupo" class="text-2xl font-bold text-white mt-1">—</p></div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Mi Grupo</p>
+                                <p id="h-grupo" class="text-2xl font-bold text-white mt-1">—</p>
+                            </div>
                         </div>
                         <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 flex items-center gap-5 shadow-lg">
                             <div class="h-12 w-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0"><i data-lucide="user-round" class="h-5 w-5"></i></div>
-                            <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estudiantes</p><p id="h-cantidad" class="text-2xl font-bold text-white mt-1">—</p></div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estudiantes</p>
+                                <p id="h-cantidad" class="text-2xl font-bold text-white mt-1">—</p>
+                            </div>
                         </div>
                         <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 flex items-center gap-5 shadow-lg">
                             <div class="h-12 w-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0"><i data-lucide="layers" class="h-5 w-5"></i></div>
-                            <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Capacidad Máxima</p><p id="h-capacidad" class="text-2xl font-bold text-white mt-1">—</p></div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Capacidad Máxima</p>
+                                <p id="h-capacidad" class="text-2xl font-bold text-white mt-1">—</p>
+                            </div>
                         </div>
                     </div>
 
@@ -371,256 +382,295 @@
             text-transform: uppercase;
             font-weight: 700;
             letter-spacing: 0.08em;
-            color: #64748b; /* slate-500 */
+            color: #64748b;
+            /* slate-500 */
         }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
     </style>
 
     <script>
-    lucide.createIcons();
-
-    // ════════════════════════════════════════════════════
-    // CONFIG / ESTADO
-    // ════════════════════════════════════════════════════
-    const API_BASE_URL = (() => {
-        const host = window.location.hostname;
-        if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:8000';
-        return window.location.origin; // Railway: mismo dominio
-    })();
-
-    const UMBRAL_APROBACION = 60;
-
-    const token = localStorage.getItem('token');
-    const idPostulante = localStorage.getItem('id_postulante');
-
-    if (!token) {
-        window.location.href = '/login';
-    }
-
-    let postulanteData = null;
-    let evaluacionesData = [];
-    let grupoData = null;
-
-    const PAGE_TITLES = {
-        perfil:     'Mi Perfil',
-        horario:    'Mi Horario',
-        resultados: 'Mis Resultados',
-    };
-
-    // ════════════════════════════════════════════════════
-    // HELPERS
-    // ════════════════════════════════════════════════════
-    function formatearFecha(fechaStr) {
-        if (!fechaStr) return '—';
-        const f = new Date(fechaStr + (fechaStr.length <= 10 ? 'T00:00:00' : ''));
-        if (isNaN(f.getTime())) return fechaStr;
-        return f.toLocaleDateString('es-BO', { day: '2-digit', month: 'long', year: 'numeric' });
-    }
-
-    function formatearHora(horaStr) {
-        if (!horaStr) return '—';
-        return horaStr.substring(0, 5);
-    }
-
-    function badgeEstadoInscripcion(estado) {
-        const map = {
-            'PENDIENTE': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-            'PROCESADO': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-            'ANULADO':   'bg-red-500/10 text-red-400 border-red-500/20',
-        };
-        const icon = {
-            'PENDIENTE': 'clock',
-            'PROCESADO': 'check-circle-2',
-            'ANULADO':   'x-circle',
-        };
-        const cls = map[estado] || 'bg-slate-700/40 text-slate-400 border-slate-600/40';
-        const ic  = icon[estado] || 'help-circle';
-        return { cls, ic, label: estado || '—' };
-    }
-
-    async function apiFetch(path) {
-        const res = await fetch(`${API_BASE_URL}${path}`, {
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-
-        if (res.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('id_postulante');
-            console.log("Hola desde Laravel");
-            //window.location.href = '/login';
-            return null;
-        }
-
-        const json = await res.json();
-        if (!res.ok || json.success === false) {
-            throw new Error(json.message || `Error en ${path}`);
-        }
-        return json;
-    }
-
-    function mostrarError(msg) {
-        document.getElementById('loading-global').classList.add('hidden');
-        const err = document.getElementById('error-global');
-        err.classList.remove('hidden');
-        document.getElementById('error-global-msg').textContent = msg;
-    }
-
-    // ════════════════════════════════════════════════════
-    // CARGA DE DATOS
-    // ════════════════════════════════════════════════════
-    async function cargarTodo() {
-        try {
-            // 1. Datos del postulante (perfil + inscripción + grupo)
-            const resPost = await apiFetch(`/api/v1/postulante/me`);
-            postulanteData = resPost.data;
-
-            // 2. Evaluaciones / notas
-            const resEval = await apiFetch(`/api/v1/postulante/evaluaciones`);
-            evaluacionesData = resEval.data || [];
-
-            // 3. Horario del grupo (si tiene grupo asignado)
-            const resHorario = await apiFetch(`/api/v1/postulante/horario`);
-            grupoData = resHorario.data?.grupo
-                ? { ...resHorario.data.grupo, horarios: resHorario.data.horarios }
-                : null;
-
-            renderHeader();
-            renderPerfil();
-            renderHorario();
-            renderResultados();
-
-            document.getElementById('loading-global').classList.add('hidden');
-            mostrarModulo('perfil');
-
-        } catch (e) {
-            mostrarError(e.message || 'No se pudo conectar con el servidor.');
-        }
-    }
-
-    // ════════════════════════════════════════════════════
-    // RENDER: HEADER / SIDEBAR
-    // ════════════════════════════════════════════════════
-    function renderHeader() {
-        const nombre = postulanteData.txt_nombre || 'Postulante';
-        const inicial = nombre.trim().charAt(0).toUpperCase() || 'P';
-
-        document.getElementById('header-username').textContent = nombre;
-        document.getElementById('header-ci').textContent = `CI: ${postulanteData.txt_ci || '—'}`;
-        document.getElementById('header-avatar').textContent = inicial;
-
-        document.getElementById('sidebar-username').textContent = nombre;
-        document.getElementById('sidebar-ci').textContent = `CI: ${postulanteData.txt_ci || '—'}`;
-        document.getElementById('sidebar-avatar').textContent = inicial;
-    }
-
-    // ════════════════════════════════════════════════════
-    // RENDER: PERFIL
-    // ════════════════════════════════════════════════════
-    function renderPerfil() {
-        const p = postulanteData;
-
-        document.getElementById('p-nombre').textContent     = p.txt_nombre || '—';
-        document.getElementById('p-ci').textContent         = p.txt_ci || '—';
-        document.getElementById('p-correo').textContent     = p.txt_correo || '—';
-        document.getElementById('p-telefono').textContent   = p.txt_telefono || '—';
-        document.getElementById('p-nacimiento').textContent = formatearFecha(p.fch_nacimiento);
-        document.getElementById('p-edad').textContent       = p.edad != null ? `${p.edad} años` : '—';
-
-        const sexoMap = { M: 'Masculino', F: 'Femenino', X: 'Otro' };
-        document.getElementById('p-sexo').textContent = sexoMap[p.chr_sexo] || p.chr_sexo || '—';
-
-        document.getElementById('p-ciudad').textContent    = p.txt_ciudad || '—';
-        document.getElementById('p-colegio').textContent   = p.txt_colegio || '—';
-        document.getElementById('p-direccion').textContent = p.txt_direccion || '—';
-
-        // Inscripción
-        const ins = p.ultima_inscripcion;
-        document.getElementById('p-gestion').textContent = p.gestion
-            ? `${p.gestion.txt_periodo} - ${p.gestion.int_año}`
-            : '—';
-        document.getElementById('p-fecha-inscripcion').textContent = ins
-            ? formatearFecha(ins.fch_inscripcion)
-            : '—';
-        document.getElementById('p-requisitos').textContent = p.requisitos_entregados != null
-            ? `${p.requisitos_entregados} requisito(s)`
-            : '—';
-
-        const estadoBadge = document.getElementById('p-estado');
-        if (ins) {
-            const { cls, ic, label } = badgeEstadoInscripcion(ins.txt_estado_inscripcion);
-            estadoBadge.className = `inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg border w-fit ${cls}`;
-            estadoBadge.innerHTML = `<i data-lucide="${ic}" class="h-3.5 w-3.5"></i> ${label}`;
-        } else {
-            estadoBadge.className = 'inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg border w-fit bg-slate-700/40 text-slate-400 border-slate-600/40';
-            estadoBadge.innerHTML = `<i data-lucide="help-circle" class="h-3.5 w-3.5"></i> Sin inscripción`;
-        }
-
-        document.getElementById('p-carrera1').textContent = p.carrera_1 || 'N/A';
-        document.getElementById('p-carrera2').textContent = p.carrera_2 || '-';
-
         lucide.createIcons();
-    }
 
-    // ════════════════════════════════════════════════════
-    // RENDER: HORARIO
-    // ════════════════════════════════════════════════════
-    function renderHorario() {
-        const sinGrupo  = document.getElementById('horario-sin-grupo');
-        const contenido = document.getElementById('horario-content');
+        // ════════════════════════════════════════════════════
+        // CONFIG / ESTADO
+        // ════════════════════════════════════════════════════
+        const API_BASE_URL = (() => {
+            const host = window.location.hostname;
+            if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:8000';
+            return window.location.origin; // Railway: mismo dominio
+        })();
 
-        if (!postulanteData.grupo?.id_grupo) {
-            sinGrupo.classList.remove('hidden');
-            contenido.classList.add('hidden');
-            return;
+        const UMBRAL_APROBACION = 60;
+
+        const token = localStorage.getItem('token');
+        const idPostulante = localStorage.getItem('id_postulante');
+
+        if (!token) {
+            window.location.href = '/login';
         }
 
-        sinGrupo.classList.add('hidden');
-        contenido.classList.remove('hidden');
+        let postulanteData = null;
+        let evaluacionesData = [];
+        let grupoData = null;
 
-        document.getElementById('h-grupo').textContent = postulanteData.grupo.txt_nombre || '—';
+        const PAGE_TITLES = {
+            perfil: 'Mi Perfil',
+            horario: 'Mi Horario',
+            resultados: 'Mis Resultados',
+        };
 
-        if (grupoData) {
-            document.getElementById('h-cantidad').textContent  = grupoData.int_cantidad_estudiantes ?? '—';
-            document.getElementById('h-capacidad').textContent = grupoData.int_capacidad_maxma ?? '—';
-        } else {
-            document.getElementById('h-cantidad').textContent  = '—';
-            document.getElementById('h-capacidad').textContent = '—';
+        // ════════════════════════════════════════════════════
+        // HELPERS
+        // ════════════════════════════════════════════════════
+        function formatearFecha(fechaStr) {
+            if (!fechaStr) return '—';
+            const f = new Date(fechaStr + (fechaStr.length <= 10 ? 'T00:00:00' : ''));
+            if (isNaN(f.getTime())) return fechaStr;
+            return f.toLocaleDateString('es-BO', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
         }
 
-        const tbody = document.getElementById('h-tabla-horario');
-        const sinHorario = document.getElementById('h-sin-horario');
-        tbody.innerHTML = '';
-
-        const horarios = grupoData?.horarios || [];
-
-        if (horarios.length === 0) {
-            sinHorario.classList.remove('hidden');
-            return;
+        function formatearHora(horaStr) {
+            if (!horaStr) return '—';
+            return horaStr.substring(0, 5);
         }
-        sinHorario.classList.add('hidden');
 
-        const ordenDias = ['LUNES', 'MARTES', 'MIERCOLES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'SÁBADO', 'DOMINGO'];
-        const horariosOrdenados = [...horarios].sort((a, b) => {
-            const da = ordenDias.indexOf((a.txt_dia_semana || '').toUpperCase());
-            const db = ordenDias.indexOf((b.txt_dia_semana || '').toUpperCase());
-            if (da !== db) return da - db;
-            return (a.tm_hora_inicio || '').localeCompare(b.tm_hora_inicio || '');
-        });
+        function badgeEstadoInscripcion(estado) {
+            const map = {
+                'PENDIENTE': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                'PROCESADO': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                'ANULADO': 'bg-red-500/10 text-red-400 border-red-500/20',
+            };
+            const icon = {
+                'PENDIENTE': 'clock',
+                'PROCESADO': 'check-circle-2',
+                'ANULADO': 'x-circle',
+            };
+            const cls = map[estado] || 'bg-slate-700/40 text-slate-400 border-slate-600/40';
+            const ic = icon[estado] || 'help-circle';
+            return {
+                cls,
+                ic,
+                label: estado || '—'
+            };
+        }
 
-        horariosOrdenados.forEach(h => {
-            const aula = h.aula
-                ? `Piso ${h.aula.int_piso} - Aula ${h.aula.txt_nro_aula}`
-                : (h.id_aula ? `Aula #${h.id_aula}` : '—');
+        async function apiFetch(path) {
+            const res = await fetch(`${API_BASE_URL}${path}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            // ── DEBUG TEMPORAL ──
+            const clone = res.clone();
+            console.log('apiFetch', path, 'status:', res.status);
+            clone.json().then(j => console.log('body:', j)).catch(() => {});
 
-            const tr = document.createElement('tr');
-            tr.className = 'hover:bg-slate-800/60 transition-colors';
-            tr.innerHTML = `
+
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('id_postulante');
+                console.log("Hola desde Laravel");
+                //window.location.href = '/login';
+                return null;
+            }
+
+            const json = await res.json();
+            if (!res.ok || json.success === false) {
+                throw new Error(json.message || `Error en ${path}`);
+            }
+            return json;
+        }
+
+        function mostrarError(msg) {
+            document.getElementById('loading-global').classList.add('hidden');
+            const err = document.getElementById('error-global');
+            err.classList.remove('hidden');
+            document.getElementById('error-global-msg').textContent = msg;
+        }
+
+        // ════════════════════════════════════════════════════
+        // CARGA DE DATOS
+        // ════════════════════════════════════════════════════
+        async function cargarTodo() {
+            try {
+                // 1. Datos del postulante (perfil + inscripción + grupo)
+                const resPost = await apiFetch(`/api/v1/postulante/me`);
+                postulanteData = resPost.data;
+
+                // 2. Evaluaciones / notas
+                const resEval = await apiFetch(`/api/v1/postulante/evaluaciones`);
+                evaluacionesData = resEval.data || [];
+
+                // 3. Horario del grupo (si tiene grupo asignado)
+                const resHorario = await apiFetch(`/api/v1/postulante/horario`);
+                grupoData = resHorario.data?.grupo ?
+                    {
+                        ...resHorario.data.grupo,
+                        horarios: resHorario.data.horarios
+                    } :
+                    null;
+
+                renderHeader();
+                renderPerfil();
+                renderHorario();
+                renderResultados();
+
+                document.getElementById('loading-global').classList.add('hidden');
+                mostrarModulo('perfil');
+
+            } catch (e) {
+                mostrarError(e.message || 'No se pudo conectar con el servidor.');
+            }
+        }
+
+        // ════════════════════════════════════════════════════
+        // RENDER: HEADER / SIDEBAR
+        // ════════════════════════════════════════════════════
+        function renderHeader() {
+            const nombre = postulanteData.txt_nombre || 'Postulante';
+            const inicial = nombre.trim().charAt(0).toUpperCase() || 'P';
+
+            document.getElementById('header-username').textContent = nombre;
+            document.getElementById('header-ci').textContent = `CI: ${postulanteData.txt_ci || '—'}`;
+            document.getElementById('header-avatar').textContent = inicial;
+
+            document.getElementById('sidebar-username').textContent = nombre;
+            document.getElementById('sidebar-ci').textContent = `CI: ${postulanteData.txt_ci || '—'}`;
+            document.getElementById('sidebar-avatar').textContent = inicial;
+        }
+
+        // ════════════════════════════════════════════════════
+        // RENDER: PERFIL
+        // ════════════════════════════════════════════════════
+        function renderPerfil() {
+            const p = postulanteData;
+
+            document.getElementById('p-nombre').textContent = p.txt_nombre || '—';
+            document.getElementById('p-ci').textContent = p.txt_ci || '—';
+            document.getElementById('p-correo').textContent = p.txt_correo || '—';
+            document.getElementById('p-telefono').textContent = p.txt_telefono || '—';
+            document.getElementById('p-nacimiento').textContent = formatearFecha(p.fch_nacimiento);
+            document.getElementById('p-edad').textContent = p.edad != null ? `${p.edad} años` : '—';
+
+            const sexoMap = {
+                M: 'Masculino',
+                F: 'Femenino',
+                X: 'Otro'
+            };
+            document.getElementById('p-sexo').textContent = sexoMap[p.chr_sexo] || p.chr_sexo || '—';
+
+            document.getElementById('p-ciudad').textContent = p.txt_ciudad || '—';
+            document.getElementById('p-colegio').textContent = p.txt_colegio || '—';
+            document.getElementById('p-direccion').textContent = p.txt_direccion || '—';
+
+            // Inscripción
+            const ins = p.ultima_inscripcion;
+            document.getElementById('p-gestion').textContent = p.gestion ?
+                `${p.gestion.txt_periodo} - ${p.gestion.int_año}` :
+                '—';
+            document.getElementById('p-fecha-inscripcion').textContent = ins ?
+                formatearFecha(ins.fch_inscripcion) :
+                '—';
+            document.getElementById('p-requisitos').textContent = p.requisitos_entregados != null ?
+                `${p.requisitos_entregados} requisito(s)` :
+                '—';
+
+            const estadoBadge = document.getElementById('p-estado');
+            if (ins) {
+                const {
+                    cls,
+                    ic,
+                    label
+                } = badgeEstadoInscripcion(ins.txt_estado_inscripcion);
+                estadoBadge.className = `inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg border w-fit ${cls}`;
+                estadoBadge.innerHTML = `<i data-lucide="${ic}" class="h-3.5 w-3.5"></i> ${label}`;
+            } else {
+                estadoBadge.className = 'inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg border w-fit bg-slate-700/40 text-slate-400 border-slate-600/40';
+                estadoBadge.innerHTML = `<i data-lucide="help-circle" class="h-3.5 w-3.5"></i> Sin inscripción`;
+            }
+
+            document.getElementById('p-carrera1').textContent = p.carrera_1 || 'N/A';
+            document.getElementById('p-carrera2').textContent = p.carrera_2 || '-';
+
+            lucide.createIcons();
+        }
+
+        // ════════════════════════════════════════════════════
+        // RENDER: HORARIO
+        // ════════════════════════════════════════════════════
+        function renderHorario() {
+            const sinGrupo = document.getElementById('horario-sin-grupo');
+            const contenido = document.getElementById('horario-content');
+
+            if (!postulanteData.grupo?.id_grupo) {
+                sinGrupo.classList.remove('hidden');
+                contenido.classList.add('hidden');
+                return;
+            }
+
+            sinGrupo.classList.add('hidden');
+            contenido.classList.remove('hidden');
+
+            document.getElementById('h-grupo').textContent = postulanteData.grupo.txt_nombre || '—';
+
+            if (grupoData) {
+                document.getElementById('h-cantidad').textContent = grupoData.int_cantidad_estudiantes ?? '—';
+                document.getElementById('h-capacidad').textContent = grupoData.int_capacidad_maxma ?? '—';
+            } else {
+                document.getElementById('h-cantidad').textContent = '—';
+                document.getElementById('h-capacidad').textContent = '—';
+            }
+
+            const tbody = document.getElementById('h-tabla-horario');
+            const sinHorario = document.getElementById('h-sin-horario');
+            tbody.innerHTML = '';
+
+            const horarios = grupoData?.horarios || [];
+
+            if (horarios.length === 0) {
+                sinHorario.classList.remove('hidden');
+                return;
+            }
+            sinHorario.classList.add('hidden');
+
+            const ordenDias = ['LUNES', 'MARTES', 'MIERCOLES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'SÁBADO', 'DOMINGO'];
+            const horariosOrdenados = [...horarios].sort((a, b) => {
+                const da = ordenDias.indexOf((a.txt_dia_semana || '').toUpperCase());
+                const db = ordenDias.indexOf((b.txt_dia_semana || '').toUpperCase());
+                if (da !== db) return da - db;
+                return (a.tm_hora_inicio || '').localeCompare(b.tm_hora_inicio || '');
+            });
+
+            horariosOrdenados.forEach(h => {
+                const aula = h.aula ?
+                    `Piso ${h.aula.int_piso} - Aula ${h.aula.txt_nro_aula}` :
+                    (h.id_aula ? `Aula #${h.id_aula}` : '—');
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/60 transition-colors';
+                tr.innerHTML = `
                 <td class="px-4 py-3 font-semibold text-white">${h.txt_dia_semana || '—'}</td>
                 <td class="px-4 py-3 text-center">${formatearHora(h.tm_hora_inicio)}</td>
                 <td class="px-4 py-3 text-center">${formatearHora(h.tm_hora_final)}</td>
@@ -631,94 +681,97 @@
                 </td>
                 <td class="px-4 py-3">${aula}</td>
             `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    // ════════════════════════════════════════════════════
-    // RENDER: RESULTADOS
-    // ════════════════════════════════════════════════════
-    function renderResultados() {
-        const sinEval   = document.getElementById('r-sin-evaluaciones');
-        const tablaCont = document.getElementById('r-tabla-container');
-        const examCont  = document.getElementById('r-examenes-container');
-
-        if (!evaluacionesData || evaluacionesData.length === 0) {
-            sinEval.classList.remove('hidden');
-            tablaCont.classList.add('hidden');
-            examCont.classList.add('hidden');
-            document.getElementById('r-promedio-general').textContent = '—';
-            const estadoBadge = document.getElementById('r-estado-final');
-            estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-slate-700/40 text-slate-400 border-slate-600/40';
-            estadoBadge.innerHTML = `<i data-lucide="minus-circle" class="h-4 w-4"></i> Sin Evaluar`;
-            lucide.createIcons();
-            return;
+                tbody.appendChild(tr);
+            });
         }
 
-        sinEval.classList.add('hidden');
-        tablaCont.classList.remove('hidden');
-        examCont.classList.remove('hidden');
+        // ════════════════════════════════════════════════════
+        // RENDER: RESULTADOS
+        // ════════════════════════════════════════════════════
+        function renderResultados() {
+            const sinEval = document.getElementById('r-sin-evaluaciones');
+            const tablaCont = document.getElementById('r-tabla-container');
+            const examCont = document.getElementById('r-examenes-container');
 
-        // ── Agrupar notas por materia ──
-        const materias = {};
-        evaluacionesData.forEach(ev => {
-            (ev.detalles || []).forEach(d => {
-                if (!materias[d.id_materia]) {
-                    materias[d.id_materia] = { nombre: d.txt_materia, notas: {} };
-                }
-                materias[d.id_materia].notas[ev.int_nro_examen] = d.num_nota;
+            if (!evaluacionesData || evaluacionesData.length === 0) {
+                sinEval.classList.remove('hidden');
+                tablaCont.classList.add('hidden');
+                examCont.classList.add('hidden');
+                document.getElementById('r-promedio-general').textContent = '—';
+                const estadoBadge = document.getElementById('r-estado-final');
+                estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-slate-700/40 text-slate-400 border-slate-600/40';
+                estadoBadge.innerHTML = `<i data-lucide="minus-circle" class="h-4 w-4"></i> Sin Evaluar`;
+                lucide.createIcons();
+                return;
+            }
+
+            sinEval.classList.add('hidden');
+            tablaCont.classList.remove('hidden');
+            examCont.classList.remove('hidden');
+
+            // ── Agrupar notas por materia ──
+            const materias = {};
+            evaluacionesData.forEach(ev => {
+                (ev.detalles || []).forEach(d => {
+                    if (!materias[d.id_materia]) {
+                        materias[d.id_materia] = {
+                            nombre: d.txt_materia,
+                            notas: {}
+                        };
+                    }
+                    materias[d.id_materia].notas[ev.int_nro_examen] = d.num_nota;
+                });
             });
-        });
 
-        const examenesExistentes = [...new Set(evaluacionesData.map(e => e.int_nro_examen))].sort();
-        [1, 2, 3].forEach(n => {
-            const th = document.getElementById(`r-th-ex${n}`);
-            if (examenesExistentes.includes(n)) {
-                th.classList.remove('hidden');
-                th.textContent = `Examen ${n}`;
-            } else {
-                th.classList.add('hidden');
-            }
-        });
-
-        const tbody = document.getElementById('r-tabla-materias');
-        tbody.innerHTML = '';
-
-        let sumaPromedios = 0;
-        let totalMaterias = 0;
-        let todasAprobadas = true;
-
-        Object.values(materias).forEach(m => {
-            const notas = [1, 2, 3].map(n => m.notas[n]).filter(v => v !== undefined && v !== null);
-            const promedio = notas.length > 0
-                ? notas.reduce((a, b) => a + Number(b), 0) / notas.length
-                : null;
-
-            if (promedio !== null) {
-                sumaPromedios += promedio;
-                totalMaterias++;
-                if (promedio < UMBRAL_APROBACION) todasAprobadas = false;
-            } else {
-                todasAprobadas = false;
-            }
-
-            const aprobado = promedio !== null && promedio >= UMBRAL_APROBACION;
-            const estadoCls = promedio === null
-                ? 'bg-slate-700/40 text-slate-400 border-slate-600/40'
-                : (aprobado ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20');
-            const estadoLabel = promedio === null ? 'Pendiente' : (aprobado ? 'Aprobado' : 'Reprobado');
-
-            const tr = document.createElement('tr');
-            tr.className = 'hover:bg-slate-800/60 transition-colors';
-
-            let celdasNotas = '';
+            const examenesExistentes = [...new Set(evaluacionesData.map(e => e.int_nro_examen))].sort();
             [1, 2, 3].forEach(n => {
-                if (!examenesExistentes.includes(n)) return;
-                const nota = m.notas[n];
-                celdasNotas += `<td class="px-4 py-3 text-center font-semibold text-slate-200">${nota != null ? Number(nota).toFixed(2) : '—'}</td>`;
+                const th = document.getElementById(`r-th-ex${n}`);
+                if (examenesExistentes.includes(n)) {
+                    th.classList.remove('hidden');
+                    th.textContent = `Examen ${n}`;
+                } else {
+                    th.classList.add('hidden');
+                }
             });
 
-            tr.innerHTML = `
+            const tbody = document.getElementById('r-tabla-materias');
+            tbody.innerHTML = '';
+
+            let sumaPromedios = 0;
+            let totalMaterias = 0;
+            let todasAprobadas = true;
+
+            Object.values(materias).forEach(m => {
+                const notas = [1, 2, 3].map(n => m.notas[n]).filter(v => v !== undefined && v !== null);
+                const promedio = notas.length > 0 ?
+                    notas.reduce((a, b) => a + Number(b), 0) / notas.length :
+                    null;
+
+                if (promedio !== null) {
+                    sumaPromedios += promedio;
+                    totalMaterias++;
+                    if (promedio < UMBRAL_APROBACION) todasAprobadas = false;
+                } else {
+                    todasAprobadas = false;
+                }
+
+                const aprobado = promedio !== null && promedio >= UMBRAL_APROBACION;
+                const estadoCls = promedio === null ?
+                    'bg-slate-700/40 text-slate-400 border-slate-600/40' :
+                    (aprobado ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20');
+                const estadoLabel = promedio === null ? 'Pendiente' : (aprobado ? 'Aprobado' : 'Reprobado');
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/60 transition-colors';
+
+                let celdasNotas = '';
+                [1, 2, 3].forEach(n => {
+                    if (!examenesExistentes.includes(n)) return;
+                    const nota = m.notas[n];
+                    celdasNotas += `<td class="px-4 py-3 text-center font-semibold text-slate-200">${nota != null ? Number(nota).toFixed(2) : '—'}</td>`;
+                });
+
+                tr.innerHTML = `
                 <td class="px-4 py-3 font-semibold text-white">${m.nombre}</td>
                 ${celdasNotas}
                 <td class="px-4 py-3 text-center font-black text-white">${promedio !== null ? promedio.toFixed(2) : '—'}</td>
@@ -726,46 +779,46 @@
                     <span class="inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-lg border ${estadoCls}">${estadoLabel}</span>
                 </td>
             `;
-            tbody.appendChild(tr);
-        });
+                tbody.appendChild(tr);
+            });
 
-        // ── Promedio general y estado final ──
-        const promedioGeneral = totalMaterias > 0 ? (sumaPromedios / totalMaterias) : null;
-        document.getElementById('r-promedio-general').textContent = promedioGeneral !== null
-            ? promedioGeneral.toFixed(2)
-            : '—';
+            // ── Promedio general y estado final ──
+            const promedioGeneral = totalMaterias > 0 ? (sumaPromedios / totalMaterias) : null;
+            document.getElementById('r-promedio-general').textContent = promedioGeneral !== null ?
+                promedioGeneral.toFixed(2) :
+                '—';
 
-        const estadoBadge = document.getElementById('r-estado-final');
-        const evaluacionCompleta = totalMaterias === 4; // 4 materias del plan
+            const estadoBadge = document.getElementById('r-estado-final');
+            const evaluacionCompleta = totalMaterias === 4; // 4 materias del plan
 
-        if (promedioGeneral === null) {
-            estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-slate-700/40 text-slate-400 border-slate-600/40';
-            estadoBadge.innerHTML = `<i data-lucide="minus-circle" class="h-4 w-4"></i> Sin Evaluar`;
-        } else if (!evaluacionCompleta) {
-            estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-amber-500/10 text-amber-400 border-amber-500/20';
-            estadoBadge.innerHTML = `<i data-lucide="hourglass" class="h-4 w-4"></i> En Proceso`;
-        } else if (todasAprobadas) {
-            estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-            estadoBadge.innerHTML = `<i data-lucide="check-circle-2" class="h-4 w-4"></i> Aprobado`;
-        } else {
-            estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-red-500/10 text-red-400 border-red-500/20';
-            estadoBadge.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4"></i> Reprobado`;
-        }
+            if (promedioGeneral === null) {
+                estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-slate-700/40 text-slate-400 border-slate-600/40';
+                estadoBadge.innerHTML = `<i data-lucide="minus-circle" class="h-4 w-4"></i> Sin Evaluar`;
+            } else if (!evaluacionCompleta) {
+                estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-amber-500/10 text-amber-400 border-amber-500/20';
+                estadoBadge.innerHTML = `<i data-lucide="hourglass" class="h-4 w-4"></i> En Proceso`;
+            } else if (todasAprobadas) {
+                estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                estadoBadge.innerHTML = `<i data-lucide="check-circle-2" class="h-4 w-4"></i> Aprobado`;
+            } else {
+                estadoBadge.className = 'inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border bg-red-500/10 text-red-400 border-red-500/20';
+                estadoBadge.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4"></i> Reprobado`;
+            }
 
-        // ── Lista de exámenes rendidos ──
-        const examList = document.getElementById('r-examenes-list');
-        examList.innerHTML = '';
+            // ── Lista de exámenes rendidos ──
+            const examList = document.getElementById('r-examenes-list');
+            examList.innerHTML = '';
 
-        evaluacionesData
-            .sort((a, b) => a.int_nro_examen - b.int_nro_examen)
-            .forEach(ev => {
-                const promedioExamen = (ev.detalles || []).length > 0
-                    ? ev.detalles.reduce((a, d) => a + Number(d.num_nota), 0) / ev.detalles.length
-                    : null;
+            evaluacionesData
+                .sort((a, b) => a.int_nro_examen - b.int_nro_examen)
+                .forEach(ev => {
+                    const promedioExamen = (ev.detalles || []).length > 0 ?
+                        ev.detalles.reduce((a, d) => a + Number(d.num_nota), 0) / ev.detalles.length :
+                        null;
 
-                const div = document.createElement('div');
-                div.className = 'flex items-center justify-between p-4 rounded-xl bg-slate-950 border border-slate-700/60';
-                div.innerHTML = `
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-4 rounded-xl bg-slate-950 border border-slate-700/60';
+                    div.innerHTML = `
                     <div class="flex items-center gap-4">
                         <span class="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold flex items-center justify-center shrink-0">
                             E${ev.int_nro_examen}
@@ -780,56 +833,60 @@
                         <p class="text-lg font-black text-white">${promedioExamen !== null ? promedioExamen.toFixed(2) : '—'}</p>
                     </div>
                 `;
-                examList.appendChild(div);
+                    examList.appendChild(div);
+                });
+
+            lucide.createIcons();
+        }
+
+        // ════════════════════════════════════════════════════
+        // NAVEGACIÓN ENTRE MÓDULOS
+        // ════════════════════════════════════════════════════
+        function mostrarModulo(moduleName) {
+            document.querySelectorAll('.app-module').forEach(m => m.classList.add('hidden'));
+            document.getElementById(`mod-${moduleName}`).classList.remove('hidden');
+
+            const title = document.getElementById('header-page-title');
+            if (title) title.textContent = PAGE_TITLES[moduleName] ?? moduleName;
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const active = btn.dataset.module === moduleName;
+                btn.className = active ?
+                    'nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer text-white bg-indigo-600/80' :
+                    'nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer text-slate-400 hover:bg-slate-700/40 hover:text-white';
             });
 
-        lucide.createIcons();
-    }
-
-    // ════════════════════════════════════════════════════
-    // NAVEGACIÓN ENTRE MÓDULOS
-    // ════════════════════════════════════════════════════
-    function mostrarModulo(moduleName) {
-        document.querySelectorAll('.app-module').forEach(m => m.classList.add('hidden'));
-        document.getElementById(`mod-${moduleName}`).classList.remove('hidden');
-
-        const title = document.getElementById('header-page-title');
-        if (title) title.textContent = PAGE_TITLES[moduleName] ?? moduleName;
+            lucide.createIcons();
+        }
 
         document.querySelectorAll('.nav-btn').forEach(btn => {
-            const active = btn.dataset.module === moduleName;
-            btn.className = active
-                ? 'nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer text-white bg-indigo-600/80'
-                : 'nav-btn w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer text-slate-400 hover:bg-slate-700/40 hover:text-white';
+            btn.addEventListener('click', () => mostrarModulo(btn.dataset.module));
         });
 
-        lucide.createIcons();
-    }
+        // ════════════════════════════════════════════════════
+        // LOGOUT
+        // ════════════════════════════════════════════════════
+        async function handleLogout() {
+            try {
+                await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                });
+            } catch (e) {
+                /* ignorar errores de logout */ }
 
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => mostrarModulo(btn.dataset.module));
-    });
+            localStorage.removeItem('token');
+            localStorage.removeItem('id_postulante');
+            window.location.href = '/login';
+        }
 
-    // ════════════════════════════════════════════════════
-    // LOGOUT
-    // ════════════════════════════════════════════════════
-    async function handleLogout() {
-        try {
-            await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-        } catch (e) { /* ignorar errores de logout */ }
-
-        localStorage.removeItem('token');
-        localStorage.removeItem('id_postulante');
-        window.location.href = '/login';
-    }
-
-    // ════════════════════════════════════════════════════
-    // INIT
-    // ════════════════════════════════════════════════════
-    cargarTodo();
+        // ════════════════════════════════════════════════════
+        // INIT
+        // ════════════════════════════════════════════════════
+        cargarTodo();
     </script>
 </body>
+
 </html>
