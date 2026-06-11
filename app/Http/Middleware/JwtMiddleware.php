@@ -32,13 +32,24 @@ class JwtMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         try {
-            $payload = JWTAuth::parseToken()->getPayload();
+            $token   = JWTAuth::parseToken();
+            $payload = $token->getPayload();
             $tipo    = $payload->get('tipo', 'administrativo');
+            $rawToken = JWTAuth::getToken();
 
             if ($tipo === 'postulante') {
                 /** @var \Tymon\JWTAuth\JWTGuard $guard */
                 $guard  = auth('api_postulante');
-                $sujeto = $guard->authenticate();
+
+                try {
+                    $sujeto = $guard->setToken($rawToken)->authenticate();
+                } catch (\Throwable $e) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Postulante no encontrado (UserNotFoundException).',
+                        'debug'   => $e->getMessage(),
+                    ], 404);
+                }
 
                 if (! $sujeto) {
                     return response()->json([
@@ -52,7 +63,16 @@ class JwtMiddleware
             } else {
                 /** @var \Tymon\JWTAuth\JWTGuard $guard */
                 $guard  = auth('api');
-                $sujeto = $guard->authenticate();
+
+                try {
+                    $sujeto = $guard->setToken($rawToken)->authenticate();
+                } catch (\Throwable $e) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Usuario no encontrado (UserNotFoundException).',
+                        'debug'   => $e->getMessage(),
+                    ], 404);
+                }
 
                 if (! $sujeto) {
                     return response()->json([
