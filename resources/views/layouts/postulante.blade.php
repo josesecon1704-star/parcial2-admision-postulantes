@@ -452,7 +452,8 @@
         if (res.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('id_postulante');
-            window.location.href = '/login';
+            console.log("Hola desde Laravel");
+            //window.location.href = '/login';
             return null;
         }
 
