@@ -281,6 +281,8 @@
                                         <th class="px-4 py-3 text-center">Hora Inicio</th>
                                         <th class="px-4 py-3 text-center">Hora Fin</th>
                                         <th class="px-4 py-3 text-center">Turno</th>
+                                        <th class="px-4 py-3 text-left">Materia</th>
+                                        <th class="px-4 py-3 text-left">Docente</th>
                                         <th class="px-4 py-3 text-left">Aula</th>
                                     </tr>
                                 </thead>
@@ -668,6 +670,9 @@
                     `Piso ${h.aula.int_piso} - Aula ${h.aula.txt_nro_aula}` :
                     (h.id_aula ? `Aula #${h.id_aula}` : '—');
 
+                const materia = h.materia?.txt_nombre || '—';
+                const docente = h.docente?.txt_nombre || '—';
+
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-800/60 transition-colors';
                 tr.innerHTML = `
@@ -679,6 +684,8 @@
                         ${h.turno?.txt_nombre || h.txt_turno || '—'}
                     </span>
                 </td>
+                <td class="px-4 py-3 font-semibold text-white">${materia}</td>
+                <td class="px-4 py-3 text-slate-400">${docente}</td>
                 <td class="px-4 py-3">${aula}</td>
             `;
                 tbody.appendChild(tr);
