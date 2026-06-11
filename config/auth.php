@@ -1,6 +1,14 @@
 <?php
 
 // DESTINO: config/auth.php  (REEMPLAZAR el existente completamente)
+//
+// CAMBIOS:
+//   - Se agrega el guard 'api_postulante' (driver jwt) con su propio
+//     provider 'postulantes' -> App\Models\Postulante.
+//   - El guard 'api' (Usuario) sigue siendo el default para personal
+//     administrativo.
+//   - JwtMiddleware/CheckRole eligen el guard correcto según el claim
+//     'tipo' del token ('postulante' -> api_postulante, resto -> api).
 
 return [
 
@@ -10,7 +18,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'defaults' => [
-        'guard'     => 'api',   // JWT como guard por defecto
+        'guard'     => 'api',   // JWT como guard por defecto (personal administrativo)
         'passwords' => 'usuarios',
     ],
 
@@ -18,7 +26,8 @@ return [
     |--------------------------------------------------------------------------
     | Authentication Guards
     |--------------------------------------------------------------------------
-    | Cambiamos el guard 'api' a JWT y apuntamos al modelo Usuario
+    | 'api'            -> JWT sobre tbl_usuario (admin/secretaria/docente)
+    | 'api_postulante' -> JWT sobre tbl_postulante (portal del postulante)
     */
     'guards' => [
         'web' => [
@@ -28,6 +37,10 @@ return [
         'api' => [
             'driver'   => 'jwt',        // tymon/jwt-auth
             'provider' => 'usuarios',
+        ],
+        'api_postulante' => [
+            'driver'   => 'jwt',
+            'provider' => 'postulantes',
         ],
     ],
 
@@ -40,6 +53,10 @@ return [
         'usuarios' => [
             'driver' => 'eloquent',
             'model'  => App\Models\Usuario::class,
+        ],
+        'postulantes' => [
+            'driver' => 'eloquent',
+            'model'  => App\Models\Postulante::class,
         ],
     ],
 

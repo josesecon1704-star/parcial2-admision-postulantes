@@ -6,11 +6,17 @@ namespace App\Http\Middleware;
 // DESTINO: app/Http/Middleware/JwtMiddleware.php
 //
 // Verifica el token JWT.
-//   - Si el token es de personal administrativo (tbl_usuario),
-//     además revisa bol_estado.
-//   - Si el token es de un postulante (claim 'tipo' === 'postulante'),
-//     tbl_postulante NO tiene bol_estado, así que se omite esa
-//     verificación.
+//   - Lee el claim 'tipo' del payload SIN autenticar todavía.
+//   - 'tipo' === 'postulante' -> autentica con guard 'api_postulante'
+//     (provider Postulante). tbl_postulante NO tiene bol_estado,
+//     así que se omite esa verificación.
+//   - cualquier otro caso -> autentica con guard 'api' (provider
+//     Usuario) y valida bol_estado, como antes.
+//
+// Tras este middleware, auth('api')->user() o
+// auth('api_postulante')->user() devuelven el sujeto autenticado
+// según corresponda (CheckRole y los controllers usan el guard
+// adecuado).
 // ============================================================
 
 use Closure;
@@ -29,22 +35,38 @@ class JwtMiddleware
             $payload = JWTAuth::parseToken()->getPayload();
             $tipo    = $payload->get('tipo', 'administrativo');
 
-            $sujeto = JWTAuth::parseToken()->authenticate();
+            if ($tipo === 'postulante') {
+                /** @var \Tymon\JWTAuth\JWTGuard $guard */
+                $guard  = auth('api_postulante');
+                $sujeto = $guard->authenticate();
 
-            if (! $sujeto) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Usuario no encontrado.',
-                ], 404);
-            }
+                if (! $sujeto) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Postulante no encontrado.',
+                    ], 404);
+                }
 
-            // Verificar bol_estado SOLO para personal administrativo
-            // (tbl_postulante no tiene esa columna)
-            if ($tipo === 'administrativo' && ! $sujeto->bol_estado) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tu cuenta está desactivada. Contacta al administrador.',
-                ], 403);
+                // tbl_postulante no tiene bol_estado: no se valida estado.
+
+            } else {
+                /** @var \Tymon\JWTAuth\JWTGuard $guard */
+                $guard  = auth('api');
+                $sujeto = $guard->authenticate();
+
+                if (! $sujeto) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Usuario no encontrado.',
+                    ], 404);
+                }
+
+                if (! $sujeto->bol_estado) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Tu cuenta está desactivada. Contacta al administrador.',
+                    ], 403);
+                }
             }
 
         } catch (TokenExpiredException) {

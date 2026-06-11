@@ -37,8 +37,14 @@ class PostulanteSelfController extends Controller
      */
     public function me(): JsonResponse
     {
-        /** @var Postulante $postulante */
-        $postulante = auth('api')->user();
+        $postulante = Postulante::find(auth('api_postulante')->id());
+
+        if (! $postulante) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Postulante no encontrado.',
+            ], 404);
+        }
 
         return response()->json([
             'success' => true,
@@ -56,8 +62,14 @@ class PostulanteSelfController extends Controller
      */
     public function horario(): JsonResponse
     {
-        /** @var Postulante $postulante */
-        $postulante = auth('api')->user();
+        $postulante = Postulante::find(auth('api_postulante')->id());
+
+        if (! $postulante) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Postulante no encontrado.',
+            ], 404);
+        }
 
         $inscripcion = $postulante->inscripciones()
             ->with(['grupo.horarios.turno', 'grupo.horarios'])
@@ -121,8 +133,14 @@ class PostulanteSelfController extends Controller
      */
     public function evaluaciones(): JsonResponse
     {
-        /** @var Postulante $postulante */
-        $postulante = auth('api')->user();
+        $postulante = Postulante::find(auth('api_postulante')->id());
+
+        if (! $postulante) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Postulante no encontrado.',
+            ], 404);
+        }
 
         $evaluaciones = Evaluacion::with(['detalles.materia'])
             ->where('id_postulante', $postulante->id_postulante)

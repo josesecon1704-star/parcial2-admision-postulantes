@@ -120,7 +120,7 @@ class AuthService
         $tipo    = $payload->get('tipo', 'administrativo');
 
         if ($tipo === 'postulante') {
-            $postulante = Postulante::find(auth('api')->id());
+            $postulante = Postulante::find(auth('api_postulante')->id());
             return ['tipo' => 'postulante', 'data' => $postulante];
         }
 
