@@ -35,6 +35,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/me',       [AuthController::class, 'me'])->name('me');
         });
     });
+// ── DIAGNÓSTICO TEMPORAL — BORRAR DESPUÉS ───────────────
+    Route::get('debug/auth-config', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkAuthConfig']);
 
     // ════════════════════════════════════════════════════════
     // RUTAS PROTEGIDAS
