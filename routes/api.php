@@ -45,6 +45,7 @@ Route::prefix('v1')->group(function () {
     Route::get('debug/route-middleware', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkRouteMiddleware']);
     Route::get('debug/double-auth', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkDoubleAuth']);
     Route::get('debug/jwt-paso-a-paso', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'jwtPasoAPaso']);
+    Route::get('debug-me-real', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'debugMeReal']);
     // ════════════════════════════════════════════════════════
     // RUTAS PROTEGIDAS
     // ════════════════════════════════════════════════════════

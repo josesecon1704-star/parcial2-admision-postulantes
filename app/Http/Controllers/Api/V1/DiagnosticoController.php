@@ -310,4 +310,66 @@ class DiagnosticoController extends Controller
 
         return response()->json($resultado);
     }
+    public function debugMeReal(\Illuminate\Http\Request $request, \App\Services\PostulanteService $service): \Illuminate\Http\JsonResponse
+{
+    $resultado = [];
+ 
+    // PASO A: leer auth_sujeto del request (lo que dejó JwtMiddleware)
+    try {
+        $sujeto = $request->attributes->get('auth_sujeto');
+        $resultado['pasoA_auth_sujeto'] = $sujeto
+            ? ('OK - clase: ' . get_class($sujeto) . ' id: ' . ($sujeto->id_postulante ?? $sujeto->id_usuario ?? '?'))
+            : 'NULL';
+    } catch (\Throwable $e) {
+        $resultado['pasoA_auth_sujeto'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+        return response()->json($resultado);
+    }
+ 
+    if (!$sujeto) {
+        return response()->json($resultado);
+    }
+ 
+    // PASO B: inscripciones() relación
+    try {
+        $inscripcion = $sujeto->inscripciones()
+            ->with(['carreras', 'grupo', 'gestion'])
+            ->latest('fch_inscripcion')
+            ->first();
+        $resultado['pasoB_inscripcion'] = $inscripcion ? 'OK - id: ' . $inscripcion->id_inscripcion : 'OK - sin inscripcion';
+    } catch (\Throwable $e) {
+        $resultado['pasoB_inscripcion'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+        $resultado['pasoB_trace'] = collect($e->getTrace())->take(5)->map(fn($t) =>
+            ($t['class'] ?? '') . ($t['type'] ?? '') . ($t['function'] ?? '') . ' @ ' . basename($t['file'] ?? '?') . ':' . ($t['line'] ?? '?')
+        );
+        return response()->json($resultado);
+    }
+ 
+    // PASO C: loadCount('requisitos')
+    try {
+        $sujeto->loadCount('requisitos');
+        $resultado['pasoC_loadCount'] = 'OK - count: ' . $sujeto->requisitos_count;
+    } catch (\Throwable $e) {
+        $resultado['pasoC_loadCount'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+        $resultado['pasoC_trace'] = collect($e->getTrace())->take(5)->map(fn($t) =>
+            ($t['class'] ?? '') . ($t['type'] ?? '') . ($t['function'] ?? '') . ' @ ' . basename($t['file'] ?? '?') . ':' . ($t['line'] ?? '?')
+        );
+        return response()->json($resultado);
+    }
+ 
+    // PASO D: formatear() completo
+    try {
+        $data = $service->formatear($sujeto, conRelaciones: true);
+        $resultado['pasoD_formatear'] = 'OK';
+        $resultado['data'] = $data;
+    } catch (\Throwable $e) {
+        $resultado['pasoD_formatear'] = 'FALLO: ' . get_class($e) . ' - ' . $e->getMessage();
+        $resultado['pasoD_trace'] = collect($e->getTrace())->take(8)->map(fn($t) =>
+            ($t['class'] ?? '') . ($t['type'] ?? '') . ($t['function'] ?? '') . ' @ ' . basename($t['file'] ?? '?') . ':' . ($t['line'] ?? '?')
+        );
+        return response()->json($resultado);
+    }
+ 
+    return response()->json($resultado);
+}
+ 
 }
