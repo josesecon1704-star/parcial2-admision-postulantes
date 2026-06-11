@@ -67,7 +67,18 @@ class JwtMiddleware
                         'message' => 'Tu cuenta está desactivada. Contacta al administrador.',
                     ], 403);
                 }
+
+                // Cargar relación rol para que CheckRole pueda leer txt_nombre
+                /** @var \App\Models\Usuario $sujeto */
+                $sujeto->loadMissing('rol');
             }
+
+            // Compartir el resultado con middlewares posteriores (CheckRole)
+            // para evitar volver a llamar a JWTAuth::parseToken()/authenticate(),
+            // que en un segundo middleware puede lanzar UserNotFoundException
+            // sin capturar.
+            $request->attributes->set('auth_tipo', $tipo);
+            $request->attributes->set('auth_sujeto', $sujeto);
 
         } catch (TokenExpiredException) {
             return response()->json([
