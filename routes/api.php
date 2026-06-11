@@ -35,6 +35,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/me',       [AuthController::class, 'me'])->name('me');
         });
     });
+
     // ── DIAGNÓSTICO TEMPORAL — BORRAR DESPUÉS ───────────────
     Route::get('debug/auth-config', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkAuthConfig']);
     Route::get('debug/postulante/{id}', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkPostulante']);
@@ -42,6 +43,8 @@ Route::prefix('v1')->group(function () {
     Route::get('debug/middleware', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkMiddlewareAlias']);
     Route::get('debug/bootstrap-file', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkBootstrapFile']);
     Route::get('debug/route-middleware', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkRouteMiddleware']);
+    Route::get('debug/double-auth', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkDoubleAuth']);
+
     // ════════════════════════════════════════════════════════
     // RUTAS PROTEGIDAS
     // ════════════════════════════════════════════════════════
@@ -120,9 +123,8 @@ Route::prefix('v1')->group(function () {
         // ── Solo POSTULANTE ──────────────────────────────────
         // Portal de autoservicio (postulante.blade.php)
         // Todos estos endpoints resuelven el id_postulante desde
-        // el claim del JWT (auth('api')->user()->id_postulante),
-        // NUNCA desde un parámetro de la URL — así un postulante
-        // jamás puede ver datos de otro.
+        // el claim del JWT, NUNCA desde un parámetro de la URL —
+        // así un postulante jamás puede ver datos de otro.
         // ════════════════════════════════════════════════════
         Route::middleware('role:POSTULANTE')->prefix('postulante')->group(function () {
             // Perfil + inscripción + carreras + grupo (mismo formato
@@ -134,11 +136,13 @@ Route::prefix('v1')->group(function () {
 
             // Exámenes (1/2/3) con notas por materia
             Route::get('evaluaciones', [PostulanteSelfController::class, 'evaluaciones']);
+
+            // ── DIAGNÓSTICO TEMPORAL — BORRAR DESPUÉS ────────
             Route::get('debug-me-flow', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkMeFlow']);
         });
     });
 });
-Route::get('debug/double-auth', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkDoubleAuth']);
+
 Route::fallback(fn() => response()->json([
     'success' => false,
     'message' => 'Endpoint no encontrado.',
