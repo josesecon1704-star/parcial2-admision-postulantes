@@ -5,18 +5,12 @@ namespace App\Http\Middleware;
 // ============================================================
 // DESTINO: app/Http/Middleware/JwtMiddleware.php
 //
-// Verifica el token JWT.
-//   - Lee el claim 'tipo' del payload SIN autenticar todavía.
-//   - 'tipo' === 'postulante' -> autentica con guard 'api_postulante'
-//     (provider Postulante). tbl_postulante NO tiene bol_estado,
-//     así que se omite esa verificación.
-//   - cualquier otro caso -> autentica con guard 'api' (provider
-//     Usuario) y valida bol_estado, como antes.
+// Versión simplificada: SOLO personal administrativo
+// (ADMINISTRADOR / SECRETARIA / DOCENTE) vía guard 'api' (tbl_usuario).
 //
-// Tras este middleware, auth('api')->user() o
-// auth('api_postulante')->user() devuelven el sujeto autenticado
-// según corresponda (CheckRole y los controllers usan el guard
-// adecuado).
+// El portal del postulante usa un middleware completamente
+// independiente: PostulanteJwtMiddleware (alias 'postulante.jwt'),
+// que NO depende de este ni de ningún guard de Laravel.
 // ============================================================
 
 use Closure;
@@ -32,72 +26,28 @@ class JwtMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         try {
-            $token   = JWTAuth::parseToken();
-            $payload = $token->getPayload();
-            $tipo    = $payload->get('tipo', 'administrativo');
-            $rawToken = JWTAuth::getToken();
+            /** @var \Tymon\JWTAuth\JWTGuard $guard */
+            $guard  = auth('api');
+            $sujeto = $guard->authenticate();
 
-            if ($tipo === 'postulante') {
-                /** @var \Tymon\JWTAuth\JWTGuard $guard */
-                $guard  = auth('api_postulante');
-
-                try {
-                    $sujeto = $guard->setToken($rawToken)->authenticate();
-                } catch (\Throwable $e) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Postulante no encontrado (UserNotFoundException).',
-                        'debug'   => $e->getMessage(),
-                    ], 404);
-                }
-
-                if (! $sujeto) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Postulante no encontrado.',
-                    ], 404);
-                }
-
-                // tbl_postulante no tiene bol_estado: no se valida estado.
-
-            } else {
-                /** @var \Tymon\JWTAuth\JWTGuard $guard */
-                $guard  = auth('api');
-
-                try {
-                    $sujeto = $guard->setToken($rawToken)->authenticate();
-                } catch (\Throwable $e) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Usuario no encontrado (UserNotFoundException).',
-                        'debug'   => $e->getMessage(),
-                    ], 404);
-                }
-
-                if (! $sujeto) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Usuario no encontrado.',
-                    ], 404);
-                }
-
-                if (! $sujeto->bol_estado) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Tu cuenta está desactivada. Contacta al administrador.',
-                    ], 403);
-                }
-
-                // Cargar relación rol para que CheckRole pueda leer txt_nombre
-                /** @var \App\Models\Usuario $sujeto */
-                $sujeto->loadMissing('rol');
+            if (! $sujeto) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado.',
+                ], 404);
             }
 
-            // Compartir el resultado con middlewares posteriores (CheckRole)
-            // para evitar volver a llamar a JWTAuth::parseToken()/authenticate(),
-            // que en un segundo middleware puede lanzar UserNotFoundException
-            // sin capturar.
-            $request->attributes->set('auth_tipo', $tipo);
+            if (! $sujeto->bol_estado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tu cuenta está desactivada. Contacta al administrador.',
+                ], 403);
+            }
+
+            /** @var \App\Models\Usuario $sujeto */
+            $sujeto->loadMissing('rol');
+
+            $request->attributes->set('auth_tipo', 'administrativo');
             $request->attributes->set('auth_sujeto', $sujeto);
 
         } catch (TokenExpiredException) {

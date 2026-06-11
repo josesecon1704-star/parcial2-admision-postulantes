@@ -36,17 +36,26 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    // ── DIAGNÓSTICO TEMPORAL — BORRAR DESPUÉS ───────────────
-    Route::get('debug/auth-config', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkAuthConfig']);
-    Route::get('debug/postulante/{id}', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkPostulante']);
-    Route::get('debug/token', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkToken']);
-    Route::get('debug/middleware', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkMiddlewareAlias']);
-    Route::get('debug/bootstrap-file', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkBootstrapFile']);
-    Route::get('debug/route-middleware', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkRouteMiddleware']);
-    Route::get('debug/double-auth', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkDoubleAuth']);
-    Route::get('debug/jwt-paso-a-paso', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'jwtPasoAPaso']);
+    // (rutas de diagnóstico eliminadas tras resolver el login del postulante)
     // ════════════════════════════════════════════════════════
-    // RUTAS PROTEGIDAS
+    // ── PORTAL DEL POSTULANTE ────────────────────────────────
+    // JWT propio (lcobucci/jwt), validado manualmente — NO usa
+    // guards de Laravel ni tymon/jwt-auth. Ver PostulanteJwtMiddleware.
+    // ════════════════════════════════════════════════════════
+    Route::middleware('postulante.jwt')->prefix('postulante')->group(function () {
+        // Perfil + inscripción + carreras + grupo (mismo formato
+        // que PostulanteService::formatear(conRelaciones: true))
+        Route::get('me', [PostulanteSelfController::class, 'me']);
+
+        // Horario semanal del grupo asignado (días, horas, turno, aula)
+        Route::get('horario', [PostulanteSelfController::class, 'horario']);
+
+        // Exámenes (1/2/3) con notas por materia
+        Route::get('evaluaciones', [PostulanteSelfController::class, 'evaluaciones']);
+    });
+
+    // ════════════════════════════════════════════════════════
+    // RUTAS PROTEGIDAS — personal administrativo
     // ════════════════════════════════════════════════════════
     Route::middleware('jwt.auth')->group(function () {
         Route::get('dashboard/metrics', [DashboardController::class, 'getMetrics']);
@@ -117,30 +126,6 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:DOCENTE')->group(function () {
             // CU-13: Carga horaria propia
             Route::get('docentes/mi-carga', [DocenteController::class, 'miCarga']);
-        });
-
-        // ════════════════════════════════════════════════════
-        // ── Solo POSTULANTE ──────────────────────────────────
-        // Portal de autoservicio (postulante.blade.php)
-        // Todos estos endpoints resuelven el id_postulante desde
-        // el claim del JWT, NUNCA desde un parámetro de la URL —
-        // así un postulante jamás puede ver datos de otro.
-        // ════════════════════════════════════════════════════
-        Route::middleware('role:POSTULANTE')->prefix('postulante')->group(function () {
-            // Perfil + inscripción + carreras + grupo (mismo formato
-            // que PostulanteService::formatear(conRelaciones: true))
-            Route::get('me', [PostulanteSelfController::class, 'me']);
-
-            // Horario semanal del grupo asignado (días, horas, turno, aula)
-            Route::get('horario', [PostulanteSelfController::class, 'horario']);
-
-            // Exámenes (1/2/3) con notas por materia
-            Route::get('evaluaciones', [PostulanteSelfController::class, 'evaluaciones']);
-
-            // ── DIAGNÓSTICO TEMPORAL — BORRAR DESPUÉS ────────
-            Route::get('debug-me-flow', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkMeFlow']);
-
-            Route::get('debug-me-real', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'debugMeReal']);
         });
     });
 });
