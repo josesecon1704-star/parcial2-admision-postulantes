@@ -39,6 +39,7 @@ Route::prefix('v1')->group(function () {
     Route::get('debug/auth-config', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkAuthConfig']);
     Route::get('debug/postulante/{id}', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkPostulante']);
     Route::get('debug/token', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkToken']);
+    Route::get('debug/middleware', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkMiddlewareAlias']);
     // ════════════════════════════════════════════════════════
     // RUTAS PROTEGIDAS
     // ════════════════════════════════════════════════════════

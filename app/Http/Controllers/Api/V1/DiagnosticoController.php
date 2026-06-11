@@ -10,6 +10,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Postulante;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Routing\Router;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -43,11 +44,6 @@ class DiagnosticoController extends Controller
         ]);
     }
 
-    /**
-     * Recibe el token vía header Authorization: Bearer {token}
-     * y prueba authenticate() contra ambos guards, capturando
-     * cualquier excepción para ver el error real.
-     */
     public function checkToken(): JsonResponse
     {
         $resultado = [
@@ -56,7 +52,6 @@ class DiagnosticoController extends Controller
             'guard_api'            => null,
         ];
 
-        // 1. Leer el payload crudo del token
         try {
             $payload = JWTAuth::parseToken()->getPayload();
             $resultado['payload'] = $payload->toArray();
@@ -64,7 +59,6 @@ class DiagnosticoController extends Controller
             $resultado['payload_error'] = get_class($e) . ': ' . $e->getMessage();
         }
 
-        // 2. Probar authenticate() con guard api_postulante
         try {
             /** @var \Tymon\JWTAuth\JWTGuard $guard */
             $guard = auth('api_postulante');
@@ -81,7 +75,6 @@ class DiagnosticoController extends Controller
             ];
         }
 
-        // 3. Probar authenticate() con guard api
         try {
             /** @var \Tymon\JWTAuth\JWTGuard $guard */
             $guard = auth('api');
@@ -99,5 +92,44 @@ class DiagnosticoController extends Controller
         }
 
         return response()->json($resultado);
+    }
+
+    /**
+     * NUEVO: revisa qué clase está realmente registrada
+     * para el alias 'jwt.auth' en el router de Laravel.
+     */
+    public function checkMiddlewareAlias(Router $router): JsonResponse
+    {
+        // middlewareGroups y aliases registrados
+        $aliases = [];
+
+        try {
+            $reflection = new \ReflectionClass($router);
+            $property = $reflection->getProperty('middlewarePriority');
+            $property->setAccessible(true);
+        } catch (\Throwable $e) {
+            // ignorar
+        }
+
+        // Forma directa: resolver el alias manualmente
+        $resolved = null;
+        try {
+            $resolved = app('router')->getMiddleware()['jwt.auth'] ?? 'NO_REGISTRADO';
+        } catch (\Throwable $e) {
+            $resolved = 'ERROR: ' . $e->getMessage();
+        }
+
+        $resolvedRole = null;
+        try {
+            $resolvedRole = app('router')->getMiddleware()['role'] ?? 'NO_REGISTRADO';
+        } catch (\Throwable $e) {
+            $resolvedRole = 'ERROR: ' . $e->getMessage();
+        }
+
+        return response()->json([
+            'jwt_auth_alias' => $resolved,
+            'role_alias'     => $resolvedRole,
+            'jwt_middleware_class_exists' => class_exists(\App\Http\Middleware\JwtMiddleware::class),
+        ]);
     }
 }
