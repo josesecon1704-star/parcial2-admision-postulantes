@@ -20,9 +20,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Postulante extends Model implements JWTSubject
+class Postulante extends Authenticatable implements JWTSubject
 {
     protected $table      = 'tbl_postulante';
     protected $primaryKey = 'id_postulante';
@@ -43,6 +44,22 @@ class Postulante extends Model implements JWTSubject
     protected $casts = [
         'fch_nacimiento' => 'date',
     ];
+
+    // ── Authenticatable: la PK real es id_postulante, no 'id' ──
+    public function getAuthIdentifierName(): string
+    {
+        return 'id_postulante';
+    }
+
+    /**
+     * tbl_postulante no tiene columna de password para login normal
+     * (el AuthService valida el CI manualmente), pero el contrato
+     * Authenticatable requiere este método.
+     */
+    public function getAuthPassword(): string
+    {
+        return '';
+    }
 
     // ── JWTSubject (requerido por tymon/jwt-auth) ───────────
 
