@@ -10,7 +10,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Postulante;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Routing\Router;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -95,43 +94,44 @@ class DiagnosticoController extends Controller
     }
 
     /**
-     * NUEVO: revisa qué clase está realmente registrada
-     * para el alias 'jwt.auth' en el router de Laravel.
+     * NUEVO: lee bootstrap/app.php DIRECTAMENTE DEL DISCO en runtime
+     * y muestra su contenido + hash, para confirmar que el archivo
+     * desplegado en el contenedor es el correcto (sin opcache/caché
+     * de por medio).
      */
-    public function checkMiddlewareAlias(Router $router): JsonResponse
+    public function checkBootstrapFile(): JsonResponse
     {
-        // middlewareGroups y aliases registrados
-        $aliases = [];
+        $path = base_path('bootstrap/app.php');
 
-        try {
-            $reflection = new \ReflectionClass($router);
-            $property = $reflection->getProperty('middlewarePriority');
-            $property->setAccessible(true);
-        } catch (\Throwable $e) {
-            // ignorar
-        }
-
-        // Forma directa: resolver el alias manualmente
-        $resolved = null;
-        try {
-            $resolved = app('router')->getMiddleware()['jwt.auth'] ?? 'NO_REGISTRADO';
-        } catch (\Throwable $e) {
-            $resolved = 'ERROR: ' . $e->getMessage();
-        }
-
-        $resolvedRole = null;
-        try {
-            $resolvedRole = app('router')->getMiddleware()['role'] ?? 'NO_REGISTRADO';
-        } catch (\Throwable $e) {
-            $resolvedRole = 'ERROR: ' . $e->getMessage();
-        }
+        $existe = file_exists($path);
+        $contenido = $existe ? file_get_contents($path) : null;
 
         return response()->json([
-            'jwt_auth_alias' => $resolved,
-            'role_alias'     => $resolvedRole,
-            'jwt_middleware_class_exists' => class_exists(\App\Http\Middleware\JwtMiddleware::class),
+            'path'                 => $path,
+            'existe'               => $existe,
+            'md5'                  => $contenido ? md5($contenido) : null,
+            'contiene_jwtmiddleware' => $contenido ? str_contains($contenido, 'JwtMiddleware') : null,
+            'contiene_tymon_authenticate' => $contenido ? str_contains($contenido, 'Tymon\\JWTAuth\\Http\\Middleware\\Authenticate') : null,
+            'contenido_completo'   => $contenido,
+            'opcache_enabled'      => function_exists('opcache_get_status') ? (opcache_get_status(false) !== false) : 'opcache_no_disponible',
         ]);
     }
 
-    
+    /**
+     * NUEVO: lista las rutas registradas para 'postulante/me'
+     * y muestra qué middlewares tiene aplicados EN RUNTIME.
+     */
+    public function checkRouteMiddleware(): JsonResponse
+    {
+        $routes = collect(\Illuminate\Support\Facades\Route::getRoutes())
+            ->filter(fn($r) => str_contains($r->uri(), 'postulante/me'))
+            ->map(fn($r) => [
+                'uri'        => $r->uri(),
+                'methods'    => $r->methods(),
+                'middleware' => $r->gatherMiddleware(),
+            ])
+            ->values();
+
+        return response()->json($routes);
+    }
 }
