@@ -134,6 +134,7 @@ Route::prefix('v1')->group(function () {
 
             // Exámenes (1/2/3) con notas por materia
             Route::get('evaluaciones', [PostulanteSelfController::class, 'evaluaciones']);
+            Route::get('debug-me-flow', [\App\Http\Controllers\Api\V1\DiagnosticoController::class, 'checkMeFlow']);
         });
     });
 });
