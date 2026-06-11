@@ -134,4 +134,43 @@ class DiagnosticoController extends Controller
 
         return response()->json($routes);
     }
+
+    public function checkMeFlow(): JsonResponse
+    {
+        $resultado = [];
+
+        try {
+            $id = auth('api_postulante')->id();
+            $resultado['auth_id'] = $id;
+        } catch (\Throwable $e) {
+            $resultado['auth_id_error'] = get_class($e) . ': ' . $e->getMessage();
+            return response()->json($resultado);
+        }
+
+        try {
+            $postulante = Postulante::find($resultado['auth_id']);
+            $resultado['postulante_encontrado'] = $postulante !== null;
+        } catch (\Throwable $e) {
+            $resultado['postulante_error'] = get_class($e) . ': ' . $e->getMessage();
+            return response()->json($resultado);
+        }
+
+        if (! $postulante) {
+            $resultado['mensaje'] = 'postulante es null';
+            return response()->json($resultado);
+        }
+
+        try {
+            $service = app(\App\Services\PostulanteService::class);
+            $data = $service->formatear($postulante, conRelaciones: true);
+            $resultado['formatear_ok'] = true;
+            $resultado['data'] = $data;
+        } catch (\Throwable $e) {
+            $resultado['formatear_error'] = get_class($e) . ': ' . $e->getMessage();
+            $resultado['formatear_trace'] = collect($e->getTrace())->take(5)->map(fn($t) => ($t['class'] ?? '') . ($t['type'] ?? '') . ($t['function'] ?? '') . ' @ ' . ($t['file'] ?? '') . ':' . ($t['line'] ?? ''))->all();
+        }
+
+        return response()->json($resultado);
+    }
+
 }
