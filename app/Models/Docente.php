@@ -22,7 +22,7 @@ class Docente extends Model
         'txt_nombre',
         'txt_telefono',
         'txt_correo',
-        'txt_usuario'
+        'id_usuario',
     ];
 
     // Profesiones con título y universidad (tabla pivote con atributos)
