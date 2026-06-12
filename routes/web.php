@@ -25,6 +25,13 @@ Route::get('/portal-postulante', function () {
     return view('layouts.postulante');
 });
 
+// Ruta 4: Portal del Docente (docente.blade.php)
+// El control de acceso real ocurre en el frontend (token en localStorage)
+// y en la API (middleware role:DOCENTE).
+Route::get('/portal-docente', function () {
+    return view('layouts.docente');
+});
+
 // Redirección por defecto
 Route::get('/', function () {
     return redirect('/login');

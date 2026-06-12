@@ -126,6 +126,8 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:DOCENTE')->group(function () {
             // CU-13: Carga horaria propia
             Route::get('docentes/mi-carga', [DocenteController::class, 'miCarga']);
+            // Perfil propio
+            Route::get('docentes/me', [DocenteController::class, 'me']);
         });
     });
 });
