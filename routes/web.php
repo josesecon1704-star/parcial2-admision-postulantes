@@ -6,6 +6,11 @@ Route::get('/login', function () {
     return view('auth.login');
 });
 
+// Ruta 1b: Registro público de postulante
+Route::get('/registro-postulante', function () {
+    return view('auth.registroPostulante');
+});
+
 // Ruta 2: para administradores y secretarias
 Route::get('/layouts', function () {
     return view('layouts.admin');

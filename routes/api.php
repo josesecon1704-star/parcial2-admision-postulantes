@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\MateriaController;
 use App\Http\Controllers\Api\V1\PostulanteController;
 use App\Http\Controllers\Api\V1\PostulanteSelfController;
 use App\Http\Controllers\Api\V1\ProfesionController;
+use App\Http\Controllers\Api\V1\PublicController;
 use App\Http\Controllers\Api\V1\RolController;
 use App\Http\Controllers\Api\V1\TurnoController;
 use App\Http\Controllers\Api\V1\UsuarioController;
@@ -37,6 +38,18 @@ Route::prefix('v1')->group(function () {
     });
 
     // (rutas de diagnóstico eliminadas tras resolver el login del postulante)
+
+    // ════════════════════════════════════════════════════════
+    // ── PÚBLICAS — Registro de postulante / recuperación ────
+    // Sin autenticación. Usadas por registroPostulante.blade.php
+    // y el modal "Olvidé mi contraseña" en login.blade.php.
+    // ════════════════════════════════════════════════════════
+    Route::prefix('public')->group(function () {
+        Route::get('opciones-registro', [PublicController::class, 'opcionesRegistro']);
+        Route::post('postulantes', [PublicController::class, 'registrarPostulante']);
+        Route::post('recuperar-clave', [PublicController::class, 'recuperarClave']);
+    });
+
     // ════════════════════════════════════════════════════════
     // ── PORTAL DEL POSTULANTE ────────────────────────────────
     // JWT propio (lcobucci/jwt), validado manualmente — NO usa
@@ -126,8 +139,6 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:DOCENTE')->group(function () {
             // CU-13: Carga horaria propia
             Route::get('docentes/mi-carga', [DocenteController::class, 'miCarga']);
-            // Perfil propio
-            Route::get('docentes/me', [DocenteController::class, 'me']);
         });
     });
 });
