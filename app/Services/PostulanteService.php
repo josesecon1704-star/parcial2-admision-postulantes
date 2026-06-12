@@ -99,7 +99,7 @@ class PostulanteService
     {
         // Cargamos la última inscripción con carreras, grupo y gestión
         $inscripcion = $postulante->inscripciones()
-            ->with(['carreras', 'grupo', 'gestion'])
+            ->with(['carreras', 'grupo', 'gestion', 'pago'])
             ->latest('fch_inscripcion')
             ->first();
 
@@ -141,6 +141,10 @@ class PostulanteService
                 'id_inscripcion'         => $inscripcion->id_inscripcion,
                 'txt_estado_inscripcion' => $inscripcion->txt_estado_inscripcion,
                 'fch_inscripcion'        => $inscripcion->fch_inscripcion,
+                'pago' => $inscripcion->pago ? [
+                    'num_monto'  => (float) $inscripcion->pago->num_monto,
+                    'txt_estado' => $inscripcion->pago->txt_estado,
+                ] : null,
             ] : null;
         }
 
