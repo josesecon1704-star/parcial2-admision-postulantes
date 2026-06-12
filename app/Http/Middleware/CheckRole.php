@@ -63,6 +63,9 @@ class CheckRole
                 'success' => false,
                 'message' => 'No tienes permiso para acceder a este recurso.',
                 'tu_rol'  => $rolUsuario,
+                'roles_esperados' => $roles,
+                'roles_count' => count($roles),
+                'roles_json' => json_encode($roles),
             ], 403);
         }
 
