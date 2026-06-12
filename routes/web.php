@@ -11,6 +11,11 @@ Route::get('/registro-postulante', function () {
     return view('auth.registroPostulante');
 });
 
+// Ruta 1c: Página de retorno de Stripe Checkout (success_url / cancel_url)
+Route::get('/pago-resultado', function () {
+    return view('auth.pagoResultado');
+});
+
 // Ruta 2: para administradores y secretarias
 Route::get('/layouts', function () {
     return view('layouts.admin');

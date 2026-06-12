@@ -195,6 +195,28 @@
                             </div>
                         </div>
 
+                        <!-- Estado de pago de matrícula -->
+                        <div id="p-pago-wrap" class="hidden border-t border-slate-700/50 pt-5">
+                            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-3">Matrícula</p>
+                            <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/60 rounded-xl border border-slate-700/50 p-4">
+                                <div class="flex items-center gap-3">
+                                    <div id="p-pago-icon-wrap" class="h-10 w-10 rounded-xl flex items-center justify-center shrink-0">
+                                        <i id="p-pago-icon" data-lucide="credit-card" class="h-5 w-5"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-bold text-white">Bs <span id="p-pago-monto">350.00</span></p>
+                                        <span id="p-pago-estado" class="inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-md border w-fit"></span>
+                                    </div>
+                                </div>
+                                <button id="p-btn-pagar" onclick="pagarMatricula()"
+                                    class="hidden py-2 px-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-medium rounded-xl text-sm flex items-center gap-2 cursor-pointer transition-all">
+                                    <i data-lucide="credit-card" class="h-4 w-4"></i>
+                                    Pagar matrícula
+                                </button>
+                            </div>
+                            <div id="p-pago-error" class="hidden mt-2 text-xs text-red-400"></div>
+                        </div>
+
                         <div class="border-t border-slate-700/50 pt-5">
                             <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-3">Carreras de Preferencia</p>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -613,6 +635,33 @@
                 estadoBadge.innerHTML = `<i data-lucide="help-circle" class="h-3.5 w-3.5"></i> Sin inscripción`;
             }
 
+            // Estado de pago de matrícula
+            const pago = ins?.pago;
+            const wrapPago = document.getElementById('p-pago-wrap');
+            if (pago) {
+                wrapPago.classList.remove('hidden');
+                document.getElementById('p-pago-monto').textContent = Number(pago.num_monto ?? 350).toFixed(2);
+
+                const estadoEl = document.getElementById('p-pago-estado');
+                const iconWrap = document.getElementById('p-pago-icon-wrap');
+                const icon = document.getElementById('p-pago-icon');
+                const btn = document.getElementById('p-btn-pagar');
+
+                if (pago.txt_estado === 'APROBADO') {
+                    estadoEl.className = 'inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-md border w-fit bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                    estadoEl.innerHTML = '<i data-lucide="check-circle-2" class="h-3.5 w-3.5"></i> Pagado';
+                    iconWrap.className = 'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400';
+                    btn.classList.add('hidden');
+                } else {
+                    estadoEl.className = 'inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-md border w-fit bg-amber-500/10 text-amber-400 border-amber-500/20';
+                    estadoEl.innerHTML = '<i data-lucide="clock" class="h-3.5 w-3.5"></i> Pendiente';
+                    iconWrap.className = 'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-amber-500/10 border border-amber-500/20 text-amber-400';
+                    btn.classList.remove('hidden');
+                }
+            } else {
+                wrapPago.classList.add('hidden');
+            }
+
             document.getElementById('p-carrera1').textContent = p.carrera_1 || 'N/A';
             document.getElementById('p-carrera2').textContent = p.carrera_2 || '-';
 
@@ -869,6 +918,40 @@
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', () => mostrarModulo(btn.dataset.module));
         });
+
+        // ════════════════════════════════════════════════════
+        // PAGO DE MATRÍCULA
+        // ════════════════════════════════════════════════════
+        async function pagarMatricula() {
+            const btn = document.getElementById('p-btn-pagar');
+            const errEl = document.getElementById('p-pago-error');
+            errEl.classList.add('hidden');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>Redirigiendo...</span>';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/v1/postulante/pagos/crear-sesion`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+                const result = await res.json();
+
+                if (!result.success) throw new Error(result.message || 'No se pudo iniciar el pago.');
+
+                window.location.href = result.data.checkout_url;
+
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="credit-card" class="h-4 w-4"></i> Pagar matrícula';
+                lucide.createIcons();
+            }
+        }
 
         // ════════════════════════════════════════════════════
         // LOGOUT

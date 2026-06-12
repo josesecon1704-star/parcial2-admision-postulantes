@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\V1\PostulanteController;
 use App\Http\Controllers\Api\V1\PostulanteSelfController;
 use App\Http\Controllers\Api\V1\ProfesionController;
 use App\Http\Controllers\Api\V1\PublicController;
+use App\Http\Controllers\Api\V1\PagoController;
+use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\RolController;
 use App\Http\Controllers\Api\V1\TurnoController;
 use App\Http\Controllers\Api\V1\UsuarioController;
@@ -48,7 +50,14 @@ Route::prefix('v1')->group(function () {
         Route::get('opciones-registro', [PublicController::class, 'opcionesRegistro']);
         Route::post('postulantes', [PublicController::class, 'registrarPostulante']);
         Route::post('recuperar-clave', [PublicController::class, 'recuperarClave']);
+
+        // Pagos (Stripe Checkout) — matrícula de admisión
+        Route::post('pagos/{idInscripcion}/crear-sesion', [PagoController::class, 'crearSesionPublica']);
+        Route::get('pagos/estado/{sessionId}', [PagoController::class, 'estado']);
     });
+
+    // Webhook de Stripe — sin autenticación, verificado por firma
+    Route::post('stripe/webhook', [StripeWebhookController::class, 'handle']);
 
     // ════════════════════════════════════════════════════════
     // ── PORTAL DEL POSTULANTE ────────────────────────────────
@@ -65,6 +74,9 @@ Route::prefix('v1')->group(function () {
 
         // Exámenes (1/2/3) con notas por materia
         Route::get('evaluaciones', [PostulanteSelfController::class, 'evaluaciones']);
+
+        // Pagar matrícula desde el portal (si sigue PENDIENTE)
+        Route::post('pagos/crear-sesion', [PagoController::class, 'crearSesionPostulante']);
     });
 
     // ════════════════════════════════════════════════════════

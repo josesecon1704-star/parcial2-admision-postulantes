@@ -21,6 +21,7 @@ use App\Models\Carrera;
 use App\Models\Gestion;
 use App\Models\Grupo;
 use App\Models\Inscripcion;
+use App\Models\Pago;
 use App\Models\Postulante;
 use App\Services\PostulanteService;
 use Illuminate\Http\JsonResponse;
@@ -61,12 +62,12 @@ class PublicController extends Controller
                     'txt_nombre'        => $g->txt_nombre,
                     'cupos_disponibles' => $g->int_capacidad_maxma - $g->int_cantidad_estudiantes,
                     'turno'             => $primerDia?->turno?->txt_turno
-                                            ?? $primerDia?->turno?->txt_nombre
-                                            ?? null,
+                        ?? $primerDia?->turno?->txt_nombre
+                        ?? null,
                     'horario_resumen'   => $primerDia
                         ? substr($primerDia->tm_hora_inicio, 0, 5) . ' - ' .
-                          // hora final del último bloque del día
-                          substr($g->horarios->sortBy('tm_hora_inicio')->last()->tm_hora_final, 0, 5)
+                        // hora final del último bloque del día
+                        substr($g->horarios->sortBy('tm_hora_inicio')->last()->tm_hora_final, 0, 5)
                         : null,
                 ];
             })
@@ -165,17 +166,25 @@ class PublicController extends Controller
                 ->where('id_grupo', $grupo->id_grupo)
                 ->increment('int_cantidad_estudiantes');
 
+            // 6. Crear registro de pago (PENDIENTE) — matrícula fija Bs 350
+            $pago = Pago::create([
+                'num_monto'      => 350.00,
+                'txt_estado'     => 'PENDIENTE',
+                'id_inscripcion' => $inscripcion->id_inscripcion,
+            ]);
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Registro exitoso. Tu usuario para ingresar al portal es tu correo y tu contraseña es tu Carnet de Identidad (CI).',
                 'data'    => [
-                    'id_postulante' => $postulante->id_postulante,
-                    'grupo'         => $grupo->txt_nombre,
+                    'id_postulante'  => $postulante->id_postulante,
+                    'id_inscripcion' => $inscripcion->id_inscripcion,
+                    'grupo'          => $grupo->txt_nombre,
+                    'monto_matricula' => (float) $pago->num_monto,
                 ],
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

@@ -17,6 +17,14 @@ return [
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
+    
+    'stripe' => [
+        'key'            => env('STRIPE_KEY'),
+        'secret'         => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'currency'       => env('STRIPE_CURRENCY', 'usd'),
+        'matricula_usd'  => env('MATRICULA_USD', 10.00),
+    ],
 
     'resend' => [
         'key' => env('RESEND_API_KEY'),

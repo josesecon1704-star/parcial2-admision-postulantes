@@ -36,6 +36,30 @@
             <span id="alertOkMsg"></span>
         </div>
 
+        <!-- Post-registro: opciones de pago de matrícula -->
+        <div id="postRegistro" class="hidden bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-xl p-6 sm:p-8 space-y-4 text-center">
+            <div class="mx-auto h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <i data-lucide="credit-card" class="h-6 w-6"></i>
+            </div>
+            <h3 class="text-base font-bold text-white">Matrícula de admisión: Bs 350.00</h3>
+            <p class="text-xs text-slate-400">Puedes pagar ahora con tarjeta (vía pasarela segura) o hacerlo más tarde desde tu portal de postulante.</p>
+
+            <div id="pagoError" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400"></div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <button type="button" id="btnPagarAhora" onclick="pagarAhora()"
+                    class="flex-1 py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-medium rounded-xl text-sm flex items-center justify-center gap-2 cursor-pointer transition-all">
+                    <i data-lucide="credit-card" class="h-4 w-4"></i>
+                    Pagar matrícula ahora
+                </button>
+                <a href="/login"
+                    class="flex-1 py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl text-sm flex items-center justify-center gap-2 transition-all">
+                    Pagar después
+                    <i data-lucide="arrow-right" class="h-4 w-4"></i>
+                </a>
+            </div>
+        </div>
+
         <form id="formRegistro" class="space-y-6 bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-xl p-6 sm:p-8">
 
             <!-- Datos personales -->
@@ -172,6 +196,41 @@
         })();
 
         let GRUPO_SELECCIONADO = null;
+        let ID_INSCRIPCION_REGISTRADA = null;
+
+        async function pagarAhora() {
+            const btn = document.getElementById('btnPagarAhora');
+            const errEl = document.getElementById('pagoError');
+            errEl.classList.add('hidden');
+
+            if (!ID_INSCRIPCION_REGISTRADA) {
+                errEl.textContent = 'No se encontró la inscripción para procesar el pago.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>Redirigiendo a la pasarela de pago...</span>';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/v1/public/pagos/${ID_INSCRIPCION_REGISTRADA}/crear-sesion`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                });
+                const result = await res.json();
+
+                if (!result.success) throw new Error(result.message || 'No se pudo iniciar el pago.');
+
+                window.location.href = result.data.checkout_url;
+
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="credit-card" class="h-4 w-4"></i> Pagar matrícula ahora';
+                lucide.createIcons();
+            }
+        }
 
         function mostrarError(msg) {
             document.getElementById('alertOk').classList.add('hidden');
@@ -298,7 +357,11 @@
 
                 mostrarOk(result.message + ` Grupo asignado: ${result.data.grupo}.`);
                 document.getElementById('formRegistro').reset();
-                setTimeout(() => window.location.href = '/login', 4000);
+                document.getElementById('formRegistro').classList.add('hidden');
+
+                ID_INSCRIPCION_REGISTRADA = result.data.id_inscripcion;
+                document.getElementById('postRegistro').classList.remove('hidden');
+                lucide.createIcons();
 
             } catch (err) {
                 mostrarError(err.message);
