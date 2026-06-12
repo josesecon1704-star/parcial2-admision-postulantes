@@ -170,9 +170,9 @@
             <div class="border-t border-slate-700/50 pt-5">
                 <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 mb-3">
                     <i data-lucide="calendar-clock" class="h-4 w-4"></i>
-                    Horario Disponible
+                    Turno
                 </h3>
-                <p class="text-[11px] text-slate-500 mb-3">Elige el horario en el que deseas asistir a tus clases (Lunes a Viernes, mismo horario diario). Solo se muestran horarios con cupo.</p>
+                <p class="text-[11px] text-slate-500 mb-3">Elige el turno en el que deseas asistir a tus clases (Lunes a Viernes, mismo horario diario). El sistema te asignará automáticamente a un grupo con cupo de ese turno.</p>
                 <div id="lista-horarios" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <p class="text-slate-500 text-xs col-span-2">Cargando horarios disponibles...</p>
                 </div>
@@ -256,7 +256,7 @@
                 const result = await res.json();
                 if (!result.success) throw new Error(result.message || 'Error al cargar opciones');
 
-                const { carreras, requisitos, horarios_disponibles } = result.data;
+                const { carreras, requisitos, turnos_disponibles } = result.data;
 
                 // Carreras
                 const opts = carreras.map(c => `<option value="${c.id_carrera}">${c.txt_nombre}</option>`).join('');
@@ -274,20 +274,22 @@
                         </label>`).join('')
                     : '<p class="text-slate-500 text-xs col-span-2">No hay requisitos configurados.</p>';
 
-                // Horarios disponibles (selección única con radio)
+                // Turnos disponibles (selección única con radio)
                 const contHor = document.getElementById('lista-horarios');
-                contHor.innerHTML = horarios_disponibles.length
-                    ? horarios_disponibles.map((g, i) => `
+                contHor.innerHTML = turnos_disponibles.length
+                    ? turnos_disponibles.map((t, i) => `
                         <label class="flex items-start gap-3 p-3 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:border-emerald-500/40 transition-all">
-                            <input type="radio" name="grupo" value="${g.id_grupo}" ${i === 0 ? 'required' : ''}
+                            <input type="radio" name="turno" value="${t.id_turno}" ${i === 0 ? 'required' : ''}
                                 class="h-4 w-4 mt-0.5 accent-emerald-500 cursor-pointer">
                             <div>
-                                <p class="text-sm font-bold text-white">${g.txt_nombre}</p>
-                                <p class="text-xs text-slate-400">${g.horario_resumen ?? '—'} · ${g.turno ?? ''}</p>
-                                <p class="text-[11px] text-emerald-400 mt-0.5">${g.cupos_disponibles} cupos disponibles</p>
+                                <p class="text-sm font-bold text-white">${t.txt_turno}</p>
+                                <p class="text-xs text-slate-400">${t.horario_resumen ?? '—'}</p>
+                                ${t.requiere_grupo_nuevo
+                                    ? '<p class="text-[11px] text-blue-400 mt-0.5">Se abrirá un nuevo grupo para este horario</p>'
+                                    : `<p class="text-[11px] text-emerald-400 mt-0.5">${t.cupos_disponibles} cupos disponibles</p>`}
                             </div>
                         </label>`).join('')
-                    : '<p class="text-amber-400 text-xs col-span-2">No hay horarios con cupo disponible en este momento. Contacta a secretaría.</p>';
+                    : '<p class="text-amber-400 text-xs col-span-2">No hay turnos configurados. Contacta a secretaría.</p>';
 
                 lucide.createIcons();
             } catch (err) {
@@ -308,9 +310,9 @@
                 return;
             }
 
-            const grupoInput = document.querySelector('input[name="grupo"]:checked');
-            if (!grupoInput) {
-                mostrarError('Debes elegir un horario disponible.');
+            const turnoInput = document.querySelector('input[name="turno"]:checked');
+            if (!turnoInput) {
+                mostrarError('Debes elegir un turno.');
                 return;
             }
 
@@ -332,7 +334,7 @@
                     { id_carrera: carrera1, int_prioridad: 1 },
                     { id_carrera: carrera2, int_prioridad: 2 },
                 ],
-                id_grupo: parseInt(grupoInput.value),
+                id_turno: parseInt(turnoInput.value),
             };
 
             const btn = document.getElementById('btnRegistrar');
