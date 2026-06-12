@@ -86,7 +86,8 @@ class DocenteController extends Controller
                 'id_rol'       => $rolDocente->id_rol,
                 'txt_username' => $username,
                 'txt_email'    => $request->txt_correo,
-                'txt_password' => Hash::make('Docente' . $docente->id_docente . '!'),
+                // Contraseña inicial = CI del docente (igual que el postulante)
+                'txt_password' => Hash::make($request->txt_ci),
                 'bol_estado'   => true,
                 'fch_creacion' => now(),
             ]);
@@ -129,7 +130,7 @@ class DocenteController extends Controller
                 'data'    => $this->formatear($docente->load('profesiones', 'formaciones', 'contratacionActiva')),
                 'credenciales' => [ // Retornamos esto solo al crear
                     'username' => $usuario->txt_username,
-                    'password' => 'Docente' . $docente->id_docente . '!'
+                    'password' => $docente->txt_ci, // contraseña inicial = su CI
                 ]
             ], 201);
         } catch (\Exception $e) {
