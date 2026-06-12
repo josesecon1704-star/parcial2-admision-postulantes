@@ -62,12 +62,12 @@ class PublicController extends Controller
                     'txt_nombre'        => $g->txt_nombre,
                     'cupos_disponibles' => $g->int_capacidad_maxma - $g->int_cantidad_estudiantes,
                     'turno'             => $primerDia?->turno?->txt_turno
-                        ?? $primerDia?->turno?->txt_nombre
-                        ?? null,
+                                            ?? $primerDia?->turno?->txt_nombre
+                                            ?? null,
                     'horario_resumen'   => $primerDia
                         ? substr($primerDia->tm_hora_inicio, 0, 5) . ' - ' .
-                        // hora final del último bloque del día
-                        substr($g->horarios->sortBy('tm_hora_inicio')->last()->tm_hora_final, 0, 5)
+                          // hora final del último bloque del día
+                          substr($g->horarios->sortBy('tm_hora_inicio')->last()->tm_hora_final, 0, 5)
                         : null,
                 ];
             })
@@ -167,9 +167,14 @@ class PublicController extends Controller
                 ->increment('int_cantidad_estudiantes');
 
             // 6. Crear registro de pago (PENDIENTE) — matrícula fija Bs 350
+            // txt_metodo y txt_referencia son NOT NULL en la BD; se usan
+            // placeholders hasta que el pago se procese (Stripe los
+            // sobrescribe en confirmarPagoPorSesion()).
             $pago = Pago::create([
                 'num_monto'      => 350.00,
                 'txt_estado'     => 'PENDIENTE',
+                'txt_metodo'     => 'PENDIENTE',
+                'txt_referencia' => 'PENDIENTE-' . $inscripcion->id_inscripcion,
                 'id_inscripcion' => $inscripcion->id_inscripcion,
             ]);
 
@@ -185,6 +190,7 @@ class PublicController extends Controller
                     'monto_matricula' => (float) $pago->num_monto,
                 ],
             ], 201);
+
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
