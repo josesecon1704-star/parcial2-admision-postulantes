@@ -176,7 +176,12 @@
                 localStorage.removeItem('id_postulante');
 
                 loginForm.reset();
-                window.location.href = '/prueba2';
+
+                if (data.usuario.rol === 'DOCENTE') {
+                    window.location.href = '/portal-docente';
+                } else {
+                    window.location.href = '/prueba2';
+                }
             }
 
         } else {
