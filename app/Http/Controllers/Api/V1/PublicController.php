@@ -36,9 +36,10 @@ class PublicController extends Controller
 
     /**
      * GET /api/v1/public/opciones-registro
-     * Devuelve las carreras disponibles y un resumen de cupos
-     * por horario (para mostrar al postulante qué horarios
-     * tienen cupo, sin que elija un grupo específico).
+     * Devuelve las carreras disponibles, los requisitos, y el
+     * resumen de cupo por TURNO (Mañana / Tarde) — el postulante
+     * elige un turno, no un grupo específico. El backend asigna
+     * automáticamente el grupo con cupo correspondiente a ese turno.
      */
     public function opcionesRegistro(): JsonResponse
     {
@@ -48,37 +49,51 @@ class PublicController extends Controller
             ->orderBy('id_requisito')
             ->get(['id_requisito', 'txt_descripcion_requisito']);
 
-        // Grupos con cupo disponible, con su resumen de horario
-        $grupos = Grupo::with(['horarios.turno'])
-            ->get()
-            ->filter(fn($g) => $g->int_cantidad_estudiantes < $g->int_capacidad_maxma)
-            ->map(function ($g) {
-                // Tomamos el primer día (todos los días tienen el mismo
-                // horario diario) para mostrar un resumen representativo
-                $primerDia = $g->horarios->sortBy('tm_hora_inicio')->first();
+        // Resumen de cupo agrupado por turno (id_turno: 1=Mañana, 2=Tarde)
+        $turnos = DB::table('tbl_turno')->orderBy('id_turno')->get(['id_turno', 'txt_turno']);
 
-                return [
-                    'id_grupo'          => $g->id_grupo,
-                    'txt_nombre'        => $g->txt_nombre,
-                    'cupos_disponibles' => $g->int_capacidad_maxma - $g->int_cantidad_estudiantes,
-                    'turno'             => $primerDia?->turno?->txt_turno
-                                            ?? $primerDia?->turno?->txt_nombre
-                                            ?? null,
-                    'horario_resumen'   => $primerDia
-                        ? substr($primerDia->tm_hora_inicio, 0, 5) . ' - ' .
-                          // hora final del último bloque del día
-                          substr($g->horarios->sortBy('tm_hora_inicio')->last()->tm_hora_final, 0, 5)
-                        : null,
-                ];
-            })
-            ->values();
+        $resumenTurnos = $turnos->map(function ($turno) {
+            // Grupos cuyo horario corresponde a este turno (cualquier
+            // bloque del grupo basta, ya que un grupo tiene un solo turno)
+            $idsGrupo = DB::table('tbl_grupo_horario as gh')
+                ->join('tbl_horario as h', 'h.id_horario', '=', 'gh.id_horario')
+                ->where('h.id_turno', $turno->id_turno)
+                ->distinct()
+                ->pluck('gh.id_grupo');
+
+            $grupos = Grupo::whereIn('id_grupo', $idsGrupo)->get();
+
+            $cuposDisponibles = $grupos->sum(fn($g) => max(0, $g->int_capacidad_maxma - $g->int_cantidad_estudiantes));
+            $grupoConCupo = $grupos->first(fn($g) => $g->int_cantidad_estudiantes < $g->int_capacidad_maxma);
+
+            // Horario representativo (mismo para todos los grupos del turno)
+            $horarioMuestra = DB::table('tbl_horario')
+                ->where('id_turno', $turno->id_turno)
+                ->orderBy('tm_hora_inicio')
+                ->get();
+
+            $resumenHorario = $horarioMuestra->isNotEmpty()
+                ? substr($horarioMuestra->first()->tm_hora_inicio, 0, 5) . ' - ' .
+                  substr($horarioMuestra->last()->tm_hora_final, 0, 5)
+                : null;
+
+            return [
+                'id_turno'          => $turno->id_turno,
+                'txt_turno'         => $turno->txt_turno,
+                'cupos_disponibles' => $cuposDisponibles,
+                'horario_resumen'   => $resumenHorario,
+                // Si no hay ningún grupo con cupo, el backend creará uno
+                // nuevo automáticamente al registrar (ver registrarPostulante).
+                'requiere_grupo_nuevo' => $grupoConCupo === null,
+            ];
+        });
 
         return response()->json([
             'success' => true,
             'data'    => [
                 'carreras' => $carreras,
                 'requisitos' => $requisitos,
-                'horarios_disponibles' => $grupos,
+                'turnos_disponibles' => $resumenTurnos,
             ],
         ]);
     }
@@ -100,32 +115,34 @@ class PublicController extends Controller
             'carreras'                  => ['required', 'array', 'min:2', 'max:2'],
             'carreras.*.id_carrera'     => ['required', 'integer', 'exists:tbl_carrera,id_carrera'],
             'carreras.*.int_prioridad'  => ['required', 'integer', 'in:1,2'],
-            'id_grupo'                  => ['required', 'integer', 'exists:tbl_grupo,id_grupo'],
+            'id_turno'                  => ['required', 'integer', 'exists:tbl_turno,id_turno'],
             'requisitos'                => ['sometimes', 'array'],
             'requisitos.*'              => ['integer', 'exists:tbl_requisito,id_requisito'],
         ]);
 
         DB::beginTransaction();
         try {
-            // Verificar cupo del grupo elegido (bloqueo de fila para
-            // evitar condiciones de carrera con registros simultáneos)
-            $grupo = Grupo::where('id_grupo', $request->id_grupo)
+            // Buscar, entre los grupos cuyo horario corresponde al turno
+            // elegido, el primero que tenga cupo disponible.
+            // lockForUpdate() evita condiciones de carrera con registros
+            // simultáneos sobre el mismo grupo.
+            $idsGrupoDelTurno = DB::table('tbl_grupo_horario as gh')
+                ->join('tbl_horario as h', 'h.id_horario', '=', 'gh.id_horario')
+                ->where('h.id_turno', $request->id_turno)
+                ->distinct()
+                ->pluck('gh.id_grupo');
+
+            $grupo = Grupo::whereIn('id_grupo', $idsGrupoDelTurno)
+                ->where('int_cantidad_estudiantes', '<', DB::raw('int_capacidad_maxma'))
                 ->lockForUpdate()
+                ->orderBy('id_grupo')
                 ->first();
 
             if (! $grupo) {
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'El grupo seleccionado no existe.',
-                ], 404);
-            }
-
-            if ($grupo->int_cantidad_estudiantes >= $grupo->int_capacidad_maxma) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El horario seleccionado ya no tiene cupo disponible. Por favor elige otro.',
+                    'message' => 'No hay cupo disponible en el turno seleccionado. Por favor contacta a secretaría.',
                 ], 409);
             }
 
