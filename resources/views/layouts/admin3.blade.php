@@ -1905,9 +1905,12 @@
         return resultado;
     }
 
-    // ── Carga inicial: postulantes enriquecidos + selector de grupos ──
-    // El listado solo trae: id, nombre, ci, carrera_1, carrera_2.
-    // Se enriquece siempre con GET /postulantes/{id} para obtener todos los campos.
+    // ── Carga inicial: postulantes (per_page alto) + selector de grupos ──
+    // PostulanteController::index() ahora devuelve formatear(conRelaciones: true),
+    // que incluye: ci, nombre, correo, teléfono, fecha nac., sexo, ciudad,
+    // colegio, carrera_1/2, grupo {id_grupo, txt_nombre}, gestión y
+    // ultima_inscripcion.txt_estado_inscripcion — todo lo que pinta la tabla,
+    // sin necesidad de enriquecer cada fila individualmente.
     async function pbCargar() {
         pbSetCargando(true);
         try {
@@ -1915,25 +1918,20 @@
 
             // Gestiones no tiene endpoint propio aún — se carga solo grupos
             const [resP, resG] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/postulantes`, { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=1000`, { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/grupos`,      { headers: h }),
             ]);
             const [rP, rG] = await Promise.all([resP.json(), resG.json()]);
 
-            // Listado base (id, nombre, ci, carrera_1, carrera_2)
+            // Listado base (id, nombre, ci, carrera_1/2, grupo {id_grupo, txt_nombre}, etc.)
             let listaBase = Array.isArray(rP.data) ? rP.data : (rP.data?.data ?? []);
 
-            // Enriquecer SIEMPRE con detalle individual (el listado no incluye los otros campos)
-            let lista = listaBase.length > 0 ? await pbEnriquecerLista(listaBase) : [];
-
-            // Preservar carrera_1 / carrera_2 del listado si el detalle no las trae
-            lista = lista.map((p, i) => ({
-                carrera_1: listaBase[i]?.carrera_1 ?? '—',
-                carrera_2: listaBase[i]?.carrera_2 ?? '—',
-                ...p,
-            }));
-
-            PB.datos = lista;
+            // No enriquecemos toda la lista de entrada (sería 800+ requests).
+            // El listado base de PostulanteService::formatear() ya incluye
+            // 'grupo' con id_grupo, suficiente para el filtro CU-18.
+            // El enriquecimiento (detalle completo por postulante) se hace
+            // SOLO sobre el subconjunto ya filtrado por grupo, en pbAplicarFiltros().
+            PB.datos = listaBase;
 
             // Selector de grupos
             const grupos = Array.isArray(rG.data) ? rG.data : (rG.data?.data ?? []);
@@ -1959,7 +1957,11 @@
     }
 
     // ── Aplica búsqueda + filtros + orden al dataset local ──
-    function pbAplicarFiltros() {
+    // Es async: cuando el resultado filtrado es manejable (pocas filas,
+    // p.ej. al filtrar por grupo), se enriquece con el detalle completo
+    // de cada postulante (PostulanteController::show), ya que el listado
+    // base no trae todos los campos (colegio, dirección, etc.).
+    async function pbAplicarFiltros() {
         const q      = (document.getElementById('pb-buscar')?.value ?? '').toLowerCase().trim();
         const grupo  = document.getElementById('pb-grupo')?.value  ?? '';
         const orden  = document.getElementById('pb-orden')?.value  ?? 'nombre_asc';
@@ -2042,7 +2044,7 @@
             const g = p.gestion ?? p.inscripciones?.[0]?.gestion ?? null;
             const gestionLabel = g ? `${g.int_año} P${g.txt_periodo}` : '—';
 
-            const insc   = p.inscripciones?.[0] ?? p.inscripcion ?? {};
+            const insc   = p.ultima_inscripcion ?? p.inscripciones?.[0] ?? p.inscripcion ?? {};
             const estado = insc.txt_estado_inscripcion ?? p.txt_estado_inscripcion ?? 'REGISTRADO';
             const eClass = estadoClass[estado] ?? estadoClass.REGISTRADO;
 

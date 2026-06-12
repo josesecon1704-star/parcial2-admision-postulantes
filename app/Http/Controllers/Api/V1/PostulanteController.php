@@ -45,8 +45,8 @@ class PostulanteController extends Controller
         return response()->json([
             'success' => true,
             'data'    => $postulantes->through(
-                fn($p) => $this->service->formatear($p)
-            ),
+                fn($p) => $this->service->formatear($p, conRelaciones: true)
+            ),1
         ], 200);
     }
 
