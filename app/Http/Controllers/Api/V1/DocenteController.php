@@ -214,6 +214,56 @@ class DocenteController extends Controller
         return response()->json(['success' => true, 'message' => 'Docente eliminado correctamente.']);
     }
 
+    // ── Perfil del docente autenticado ───────────────────────
+    // GET /api/v1/docentes/me  (rol DOCENTE)
+    public function me(): JsonResponse
+    {
+        $usuario = auth('api')->user();
+
+        $docente = Docente::with(['profesiones', 'formaciones', 'contratacionActiva'])
+            ->where('txt_correo', $usuario->txt_email)
+            ->first();
+
+        if (! $docente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró un docente vinculado a tu cuenta.',
+            ], 404);
+        }
+
+        $totalGrupos = $docente->asignaciones()->distinct('id_grupo')->count('id_grupo');
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'id_docente'      => $docente->id_docente,
+                'txt_ci'          => $docente->txt_ci,
+                'txt_nombre'      => $docente->txt_nombre,
+                'txt_telefono'    => $docente->txt_telefono,
+                'txt_correo'      => $docente->txt_correo,
+                'username'        => $usuario->txt_username,
+                'total_grupos'    => $totalGrupos,
+                'maximo_grupos'   => 4,
+                'profesiones'     => $docente->profesiones->map(fn($p) => [
+                    'id_profesion'    => $p->id_profesion,
+                    'txt_descripcion' => $p->txt_descripcion,
+                    'txt_titulo'      => $p->pivot->txt_titulo,
+                    'txt_universidad' => $p->pivot->txt_universidad,
+                    'fch_emicion'     => $p->pivot->fch_emicion,
+                ]),
+                'formaciones'     => $docente->formaciones->map(fn($f) => [
+                    'id_formacion' => $f->id_formacion,
+                    'txt_nombre'   => $f->txt_nombre ?? $f->txt_descripcion ?? null,
+                ]),
+                'contratacion'    => $docente->contratacionActiva->first() ? [
+                    'fch_contrato' => $docente->contratacionActiva->first()->fch_contrato,
+                    'num_salario'  => $docente->contratacionActiva->first()->num_salario,
+                    'txt_estado'   => $docente->contratacionActiva->first()->txt_estado,
+                ] : null,
+            ],
+        ]);
+    }
+
     // ── CU-13: Consultar carga horaria del docente autenticado
     // GET /api/v1/docentes/mi-carga  (rol DOCENTE)
     public function miCarga(): JsonResponse
@@ -236,27 +286,71 @@ class DocenteController extends Controller
                 'grupo:id_grupo,txt_nombre,int_cantidad_estudiantes,int_capacidad_maxma',
                 'grupo.horarios.turno',
             ])
-            ->get()
-            ->map(fn($a) => [
-                'id_asignacion'   => $a->id_asignacion,
-                'materia'         => $a->materia->txt_nombre,
-                'grupo'           => $a->grupo->txt_nombre,
-                'estudiantes'     => $a->grupo->int_cantidad_estudiantes,
-                'capacidad'       => $a->grupo->int_capacidad_maxma,
-                'horarios'        => $a->grupo->horarios->map(fn($h) => [
-                    'dia'         => $h->txt_dia_semana,
-                    'inicio'      => $h->tm_hora_inicio,
-                    'final'       => $h->tm_hora_final,
-                    'turno'       => $h->turno->txt_turno,
-                ]),
-            ]);
+            ->get();
+
+        $data = $asignaciones->map(function ($a) use ($docente) {
+            $grupo = $a->grupo;
+
+            // Todas las asignaciones de ESTE grupo (para saber el bloque
+            // que le corresponde a la materia de $a dentro del día)
+            $asignacionesGrupo = \App\Models\AsignacionDocente::where('id_grupo', $grupo->id_grupo)
+                ->orderBy('id_asignacion')
+                ->get();
+
+            $bloqueDeEstaMateria = $asignacionesGrupo->search(
+                fn($x) => $x->id_asignacion === $a->id_asignacion
+            );
+
+            // Agrupar horarios del grupo por día, ordenados por hora,
+            // y quedarnos solo con el bloque que corresponde a esta materia
+            $horariosPorDia = $grupo->horarios
+                ->sortBy('tm_hora_inicio')
+                ->groupBy('txt_dia_semana');
+
+            $horarios = collect();
+            foreach ($horariosPorDia as $dia => $items) {
+                $ordenados = $items->sortBy('tm_hora_inicio')->values();
+                $h = $ordenados->get($bloqueDeEstaMateria);
+
+                if ($h) {
+                    $aula = $h->pivot->id_aula
+                        ? \App\Models\Aula::find($h->pivot->id_aula)
+                        : null;
+
+                    $horarios->push([
+                        'dia'    => $h->txt_dia_semana,
+                        'inicio' => $h->tm_hora_inicio,
+                        'final'  => $h->tm_hora_final,
+                        'turno'  => $h->turno->txt_turno ?? $h->turno->txt_nombre ?? null,
+                        'aula'   => $aula ? [
+                            'int_piso'     => $aula->int_piso,
+                            'txt_nro_aula' => $aula->txt_nro_aula,
+                        ] : null,
+                    ]);
+                }
+            }
+
+            // Ordenar por día (Lunes a Viernes)
+            $ordenDias = ['LUNES' => 1, 'MARTES' => 2, 'MIERCOLES' => 3, 'JUEVES' => 4, 'VIERNES' => 5];
+            $horarios = $horarios->sortBy(fn($h) => $ordenDias[$h['dia']] ?? 99)->values();
+
+            return [
+                'id_asignacion' => $a->id_asignacion,
+                'materia'       => $a->materia->txt_nombre,
+                'grupo'         => $grupo->txt_nombre,
+                'id_grupo'      => $grupo->id_grupo,
+                'estudiantes'   => $grupo->int_cantidad_estudiantes,
+                'capacidad'     => $grupo->int_capacidad_maxma,
+                'horarios'      => $horarios,
+            ];
+        });
 
         return response()->json([
             'success'         => true,
             'docente'         => $docente->txt_nombre,
-            'total_grupos'    => $asignaciones->count(),
+            'total_grupos'    => $data->count(),
             'maximo_grupos'   => 4,
-            'data'            => $asignaciones,
+            'data'            => $data->values(),
         ]);
     }
 
