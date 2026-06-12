@@ -104,6 +104,20 @@ Route::prefix('v1')->group(function () {
             Route::post('grupos/{id}/horarios',        [GrupoController::class, 'asignarHorario']);
         });
 
+        // ── Solo DOCENTE ────────────────────────────────────
+        // IMPORTANTE: este grupo debe registrarse ANTES de
+        // apiResource('docentes', ...) más abajo. Ese apiResource
+        // crea la ruta GET /docentes/{docente}, que de lo contrario
+        // capturaría /docentes/me y /docentes/mi-carga como si
+        // {docente}='me' / 'mi-carga' (y luego CheckRole evaluaría
+        // los roles ADMINISTRADOR,SECRETARIA en vez de DOCENTE).
+        Route::middleware('role:DOCENTE')->group(function () {
+            // CU-13: Carga horaria propia
+            Route::get('docentes/mi-carga', [DocenteController::class, 'miCarga']);
+            // Perfil propio
+            Route::get('docentes/me', [DocenteController::class, 'me']);
+        });
+
         // ── ADMINISTRADOR o SECRETARIA ──────────────────────
         Route::middleware('role:ADMINISTRADOR,SECRETARIA')->group(function () {
 
@@ -133,14 +147,6 @@ Route::prefix('v1')->group(function () {
             // CU-14/18: Grupos (consultar)
             Route::apiResource('grupos', GrupoController::class)->only(['index', 'show']);
             Route::get('grupos/{id}/estudiantes', [GrupoController::class, 'estudiantes']);
-        });
-
-        // ── Solo DOCENTE ────────────────────────────────────
-        Route::middleware('role:DOCENTE')->group(function () {
-            // CU-13: Carga horaria propia
-            Route::get('docentes/mi-carga', [DocenteController::class, 'miCarga']);
-            // Perfil propio
-            Route::get('docentes/me', [DocenteController::class, 'me']);
         });
     });
 });
