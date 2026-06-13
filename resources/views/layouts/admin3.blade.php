@@ -661,11 +661,15 @@
                                     <th class="px-5 py-3">Grupo</th>
                                     <th class="px-5 py-3">Gestión</th>
                                     <th class="px-5 py-3">Estado</th>
+                                    <th class="px-5 py-3 cursor-pointer hover:text-white transition select-none" onclick="pbOrdenarPor('nota_asc','nota_desc')">
+                                        <span class="flex items-center gap-1.5">Nota Final <i data-lucide="chevrons-up-down" class="h-3 w-3"></i></span>
+                                    </th>
+                                    <th class="px-5 py-3 text-emerald-400">Admisión</th>
                                 </tr>
                             </thead>
                             <tbody id="pb-tabla-body" class="text-slate-300 divide-y divide-slate-700/30">
                                 <tr>
-                                    <td colspan="13" class="px-5 py-10 text-center">
+                                    <td colspan="15" class="px-5 py-10 text-center">
                                         <div class="flex flex-col items-center gap-2 text-slate-500">
                                             <i data-lucide="loader" class="h-6 w-6 animate-spin"></i>
                                             <span class="text-xs">Cargando postulantes...</span>
@@ -1053,6 +1057,10 @@
                                 <div>
                                     <p class="text-slate-500 uppercase font-bold tracking-wider text-[10px]">2da Opción</p>
                                     <p id="notas-post-carrera2" class="text-purple-300 mt-0.5"></p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-500 uppercase font-bold tracking-wider text-[10px]">Admisión</p>
+                                    <p id="notas-post-admision" class="mt-0.5 font-bold"></p>
                                 </div>
                             </div>
                         </div>
@@ -1949,7 +1957,7 @@
         } catch (err) {
             console.error('pbCargar:', err);
             document.getElementById('pb-tabla-body').innerHTML =
-                `<tr><td colspan="13" class="px-5 py-8 text-center text-red-400 text-xs">
+                `<tr><td colspan="15" class="px-5 py-8 text-center text-red-400 text-xs">
                     Error al cargar datos. Verifica la conexión con el servidor.</td></tr>`;
         } finally {
             pbSetCargando(false);
@@ -1990,6 +1998,8 @@
                 case 'nombre_desc': return (b.txt_nombre ?? '').localeCompare(a.txt_nombre ?? '');
                 case 'ci_asc':      return (a.txt_ci ?? '').localeCompare(b.txt_ci ?? '');
                 case 'ci_desc':     return (b.txt_ci ?? '').localeCompare(a.txt_ci ?? '');
+                case 'nota_asc':    return (a.admision?.nota_final ?? -1) - (b.admision?.nota_final ?? -1);
+                case 'nota_desc':   return (b.admision?.nota_final ?? -1) - (a.admision?.nota_final ?? -1);
                 default:            return 0;
             }
         });
@@ -2017,7 +2027,7 @@
             total === 0 ? 'Sin resultados' : `${total} postulante${total !== 1 ? 's' : ''}`;
 
         if (!pagina.length) {
-            body.innerHTML = `<tr><td colspan="13" class="px-5 py-10 text-center text-slate-500 text-xs">
+            body.innerHTML = `<tr><td colspan="15" class="px-5 py-10 text-center text-slate-500 text-xs">
                 No se encontraron postulantes con los filtros seleccionados.</td></tr>`;
             document.getElementById('pb-paginacion').classList.add('hidden');
             return;
@@ -2030,6 +2040,20 @@
             REPROBADO:  'bg-red-500/10 text-red-400 border-red-500/20',
             PROCESADO:  'bg-blue-500/10 text-blue-400 border-blue-500/20',
             REGISTRADO: 'bg-slate-700/40 text-slate-400 border-slate-600/30',
+        };
+
+        const admisionClass = {
+            ADMITIDO_CARRERA_1: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+            ADMITIDO_CARRERA_2: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+            NO_ADMITIDO:        'bg-amber-500/10 text-amber-400 border-amber-500/20',
+            NO_APROBADO:        'bg-red-500/10 text-red-400 border-red-500/20',
+        };
+
+        const admisionLabel = {
+            ADMITIDO_CARRERA_1: 'Admitido (1ra opción)',
+            ADMITIDO_CARRERA_2: 'Admitido (2da opción)',
+            NO_ADMITIDO:        'No admitido',
+            NO_APROBADO:        'No aprobado',
         };
 
         body.innerHTML = pagina.map(p => {
@@ -2047,6 +2071,14 @@
             const insc   = p.ultima_inscripcion ?? p.inscripciones?.[0] ?? p.inscripcion ?? {};
             const estado = insc.txt_estado_inscripcion ?? p.txt_estado_inscripcion ?? 'REGISTRADO';
             const eClass = estadoClass[estado] ?? estadoClass.REGISTRADO;
+
+            // Resultado de admisión (calculado por AdmisionService)
+            const adm = p.admision ?? null;
+            const notaFinal = adm?.nota_final != null ? Number(adm.nota_final).toFixed(2) : '—';
+            const resultadoKey = adm?.txt_resultado ?? null;
+            const aClass = resultadoKey ? (admisionClass[resultadoKey] ?? '') : 'bg-slate-700/40 text-slate-400 border-slate-600/30';
+            const aLabel = resultadoKey ? (admisionLabel[resultadoKey] ?? resultadoKey) : 'Sin notas';
+            const carreraAdmitida = adm?.txt_carrera_admitida;
 
             return `<tr class="hover:bg-slate-800/30 transition-colors">
                 <td class="px-5 py-3 font-mono text-xs text-slate-300 whitespace-nowrap">${p.txt_ci ?? '—'}</td>
@@ -2067,6 +2099,11 @@
                 <td class="px-5 py-3 text-slate-400 text-xs whitespace-nowrap">${gestionLabel}</td>
                 <td class="px-5 py-3 whitespace-nowrap">
                     <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${eClass}">${estado}</span>
+                </td>
+                <td class="px-5 py-3 text-slate-300 text-xs font-mono whitespace-nowrap">${notaFinal}</td>
+                <td class="px-5 py-3 whitespace-nowrap">
+                    <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${aClass}">${aLabel}</span>
+                    ${carreraAdmitida ? `<div class="text-[11px] text-slate-400 mt-1">${carreraAdmitida}</div>` : ''}
                 </td>
             </tr>`;
         }).join('');
@@ -2097,7 +2134,7 @@
     function pbSetCargando(on) {
         if (on) {
             document.getElementById('pb-tabla-body').innerHTML =
-                `<tr><td colspan="13" class="px-5 py-10 text-center">
+                `<tr><td colspan="15" class="px-5 py-10 text-center">
                     <div class="flex flex-col items-center gap-2 text-slate-500">
                         <i data-lucide="loader" class="h-6 w-6 animate-spin"></i>
                         <span class="text-xs">Cargando postulantes...</span>
@@ -2319,6 +2356,48 @@
         document.getElementById('notas-vacio').classList.add('hidden');
     }
 
+    // Carga el resultado de admisión (nota final + carrera admitida)
+    // vía GET /postulantes/{id}, que sí incluye AdmisionService::resultadoDe()
+    async function notasCargarAdmision(idPostulante) {
+        const el = document.getElementById('notas-post-admision');
+        el.textContent = 'Calculando...';
+        el.className = 'mt-0.5 font-bold text-slate-400';
+
+        const admisionClass = {
+            ADMITIDO_CARRERA_1: 'text-emerald-400',
+            ADMITIDO_CARRERA_2: 'text-blue-400',
+            NO_ADMITIDO:        'text-amber-400',
+            NO_APROBADO:        'text-red-400',
+        };
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/v1/postulantes/${idPostulante}`, { headers: authHeaders() });
+            const result = await res.json();
+            const adm = result.data?.admision;
+
+            if (!adm) {
+                el.textContent = 'Sin notas';
+                el.className = 'mt-0.5 font-bold text-slate-500';
+                return;
+            }
+
+            const nota = adm.nota_final != null ? Number(adm.nota_final).toFixed(2) : '—';
+
+            if (adm.txt_resultado === 'ADMITIDO_CARRERA_1' || adm.txt_resultado === 'ADMITIDO_CARRERA_2') {
+                el.textContent = `${adm.txt_carrera_admitida} (Nota: ${nota})`;
+            } else if (adm.txt_resultado === 'NO_ADMITIDO') {
+                el.textContent = `No admitido (Nota: ${nota})`;
+            } else {
+                el.textContent = 'No aprobado';
+            }
+            el.className = `mt-0.5 font-bold ${admisionClass[adm.txt_resultado] ?? 'text-slate-400'}`;
+
+        } catch (err) {
+            el.textContent = '—';
+            el.className = 'mt-0.5 font-bold text-slate-500';
+        }
+    }
+
     // PASO 1: buscar postulante por CI o nombre
     async function notasBuscarPostulante() {
         const q   = document.getElementById('notas-ci-input').value.trim();
@@ -2356,6 +2435,9 @@
             document.getElementById('notas-post-carrera2').textContent = p.carrera_2   ?? '—';
             document.getElementById('notas-postulante-card').classList.remove('hidden');
             lucide.createIcons();
+
+            // Resultado de admisión (requiere show(), que sí calcula AdmisionService)
+            notasCargarAdmision(p.id_postulante);
 
             // Cargar evaluaciones y materias en paralelo
             await notasCargarEvaluaciones();

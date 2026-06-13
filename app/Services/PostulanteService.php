@@ -19,8 +19,14 @@ class PostulanteService
 {
     /**
      * Listar postulantes con filtros y paginación (CU-10)
+     *
+     * IMPORTANTE: precarga (eager load) la última inscripción con
+     * sus relaciones (carreras, grupo, gestion, pago) y el conteo
+     * de requisitos en UNA sola tanda de queries adicionales, sin
+     * importar cuántos postulantes haya (evita el problema N+1 que
+     * causaba timeouts con per_page=1000).
      */
-    public function listar(array $filtros, int $perPage = 15): LengthAwarePaginator
+    public function listar(array $filtros, int $perPage = 15, bool $conRelaciones = false): LengthAwarePaginator
     {
         $query = Postulante::query();
 
@@ -42,6 +48,18 @@ class PostulanteService
         // Filtro por sexo
         if (! empty($filtros['sexo'])) {
             $query->where('chr_sexo', strtoupper($filtros['sexo']));
+        }
+
+        // Eager load: última inscripción + sus relaciones, en lote
+        // (no por-fila). 'inscripciones' se ordena por fecha desc;
+        // tomamos solo la primera en formatear() con ->first().
+        $query->with([
+            'inscripciones' => fn($q) => $q->latest('fch_inscripcion')
+                ->with(['carreras', 'grupo', 'gestion', 'pago']),
+        ]);
+
+        if ($conRelaciones) {
+            $query->withCount('requisitos');
         }
 
         return $query
@@ -93,20 +111,26 @@ class PostulanteService
     }
 
     /**
-     * Formatear un postulante para la respuesta JSON
+     * Formatear un postulante para la respuesta JSON.
+     *
+     * IMPORTANTE: usa $postulante->inscripciones (la colección YA
+     * cargada por listar() vía with()), NO
+     * $postulante->inscripciones()->with(...)->first(), que
+     * dispararía una query nueva POR CADA postulante (N+1).
+     *
+     * @param array|null $resultadoAdmision Resultado precalculado por
+     *        AdmisionService::calcularResultados() para este postulante
+     *        (nota_final, txt_resultado, txt_carrera_admitida, etc.).
+     *        Se pasa desde fuera para evitar recalcular el ranking
+     *        completo por cada fila.
      */
-    public function formatear(Postulante $postulante, bool $conRelaciones = false): array
+    public function formatear(Postulante $postulante, bool $conRelaciones = false, ?array $resultadoAdmision = null): array
     {
-        // Cargamos la última inscripción con carreras, grupo y gestión
-        $inscripcion = $postulante->inscripciones()
-            ->with(['carreras', 'grupo', 'gestion', 'pago'])
-            ->latest('fch_inscripcion')
-            ->first();
+        $inscripcion = $postulante->inscripciones->first();
 
         $carrera1 = $inscripcion ? $inscripcion->carreras->firstWhere('pivot.int_prioridad', 1) : null;
         $carrera2 = $inscripcion ? $inscripcion->carreras->firstWhere('pivot.int_prioridad', 2) : null;
 
-        // Grupo: ahora viene de inscripcion.id_grupo (relación directa)
         $grupo   = $inscripcion?->grupo;
         $gestion = $inscripcion?->gestion;
 
@@ -135,8 +159,9 @@ class PostulanteService
         ];
 
         if ($conRelaciones) {
-            $postulante->loadCount('requisitos');
-            $data['requisitos_entregados'] = $postulante->requisitos_count;
+            $data['requisitos_entregados'] = $postulante->requisitos_count
+                ?? $postulante->requisitos()->count();
+
             $data['ultima_inscripcion'] = $inscripcion ? [
                 'id_inscripcion'         => $inscripcion->id_inscripcion,
                 'txt_estado_inscripcion' => $inscripcion->txt_estado_inscripcion,
@@ -146,6 +171,18 @@ class PostulanteService
                     'txt_estado' => $inscripcion->pago->txt_estado,
                 ] : null,
             ] : null;
+        }
+
+        // Resultado de admisión (nota final, aprobado, carrera admitida)
+        if ($resultadoAdmision) {
+            $data['admision'] = [
+                'nota_final'           => $resultadoAdmision['nota_final'],
+                'aprobado'             => $resultadoAdmision['aprobado'],
+                'ranking'              => $resultadoAdmision['ranking'],
+                'txt_resultado'        => $resultadoAdmision['txt_resultado'],
+                'id_carrera_admitida'  => $resultadoAdmision['id_carrera_admitida'],
+                'txt_carrera_admitida' => $resultadoAdmision['txt_carrera_admitida'],
+            ];
         }
 
         return $data;

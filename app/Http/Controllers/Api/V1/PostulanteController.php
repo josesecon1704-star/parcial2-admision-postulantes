@@ -17,6 +17,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePostulanteRequest;
 use App\Http\Requests\UpdatePostulanteRequest;
 use App\Models\Postulante;
+use App\Services\AdmisionService;
 use App\Services\PostulanteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,8 @@ use Illuminate\Support\Facades\DB;
 class PostulanteController extends Controller
 {
     public function __construct(
-        private readonly PostulanteService $service
+        private readonly PostulanteService $service,
+        private readonly AdmisionService $admision
     ) {}
 
     // ──────────────────────────────────────────────────────
@@ -38,15 +40,22 @@ class PostulanteController extends Controller
         $postulantes = $this->service->listar(
             filtros: $request->only(['buscar', 'ciudad', 'sexo']),
             perPage: (int) $request->get('per_page', 15),
+            conRelaciones: true,
         );
 
-
+        // Resultado de admisión (nota final, ranking, carrera admitida)
+        // calculado UNA SOLA VEZ para todos los postulantes, no por fila.
+        $resultadosAdmision = $this->admision->calcularResultados();
 
         return response()->json([
             'success' => true,
             'data'    => $postulantes->through(
-                fn($p) => $this->service->formatear($p, conRelaciones: true)
-            ),1
+                fn($p) => $this->service->formatear(
+                    $p,
+                    conRelaciones: true,
+                    resultadoAdmision: $resultadosAdmision->get($p->id_postulante)
+                )
+            ),
         ], 200);
     }
 
@@ -64,7 +73,11 @@ class PostulanteController extends Controller
 
         $termino = $request->q;
 
-        $postulantes = Postulante::where('txt_ci',     'ilike', "%{$termino}%")
+        $postulantes = Postulante::with([
+                'inscripciones' => fn($q) => $q->latest('fch_inscripcion')
+                    ->with(['carreras', 'grupo', 'gestion', 'pago']),
+            ])
+            ->where('txt_ci',     'ilike', "%{$termino}%")
             ->orWhere('txt_nombre', 'ilike', "%{$termino}%")
             ->orWhere('txt_correo', 'ilike', "%{$termino}%")
             ->orderBy('txt_nombre')
@@ -86,7 +99,12 @@ class PostulanteController extends Controller
     // ──────────────────────────────────────────────────────
     public function show(int $id): JsonResponse
     {
-        $postulante = Postulante::find($id);
+        $postulante = Postulante::with([
+                'inscripciones' => fn($q) => $q->latest('fch_inscripcion')
+                    ->with(['carreras', 'grupo', 'gestion', 'pago']),
+            ])
+            ->withCount('requisitos')
+            ->find($id);
 
         if (! $postulante) {
             return response()->json([
@@ -95,9 +113,15 @@ class PostulanteController extends Controller
             ], 404);
         }
 
+        $resultadoAdmision = $this->admision->resultadoDe($id);
+
         return response()->json([
             'success' => true,
-            'data'    => $this->service->formatear($postulante, conRelaciones: true),
+            'data'    => $this->service->formatear(
+                $postulante,
+                conRelaciones: true,
+                resultadoAdmision: $resultadoAdmision
+            ),
         ], 200);
     }
 
@@ -223,51 +247,5 @@ class PostulanteController extends Controller
                 'message' => $e->getMessage(),
             ], 409); // 409 Conflict — no se puede eliminar por dependencias
         }
-    }
-    public function formatear(Postulante $postulante, bool $conRelaciones = false): array
-    {
-        $inscripcion = $postulante->inscripciones()
-            ->with('carreras')
-            ->latest('fch_inscripcion')
-            ->first();
-
-        // 1. Construimos el array con todos los datos
-        $data = [
-            'id_postulante'  => $postulante->id_postulante,
-            'txt_ci'         => $postulante->txt_ci,
-            'txt_nombre'     => $postulante->txt_nombre,
-            'txt_telefono'   => $postulante->txt_telefono,
-            'txt_correo'     => $postulante->txt_correo,
-            'fch_nacimiento' => $postulante->fch_nacimiento?->format('Y-m-d'),
-            'edad'           => $postulante->edad,
-            'chr_sexo'       => $postulante->chr_sexo,
-            'sexo_label'     => match ($postulante->chr_sexo) {
-                'M' => 'Masculino',
-                'F' => 'Femenino',
-                'X' => 'Otro',
-                default => '-'
-            },
-            'txt_direccion'  => $postulante->txt_direccion,
-            'txt_colegio'    => $postulante->txt_colegio,
-            'txt_ciudad'     => $postulante->txt_ciudad,
-            // Usamos la lógica segura que tenías para las carreras
-            'carrera_1'      => $inscripcion?->carreras->firstWhere('pivot.int_prioridad', 1)?->txt_nombre ?? 'N/A',
-            'carrera_2'      => $inscripcion?->carreras->firstWhere('pivot.int_prioridad', 2)?->txt_nombre ?? '-',
-        ];
-
-        // 2. Si se piden relaciones, agregamos el extra
-        if ($conRelaciones) {
-            $postulante->loadCount('requisitos');
-            $data['requisitos_entregados'] = $postulante->requisitos_count;
-
-            $data['ultima_inscripcion'] = $inscripcion ? [
-                'id_inscripcion'         => $inscripcion->id_inscripcion,
-                'txt_estado_inscripcion' => $inscripcion->txt_estado_inscripcion,
-                'fch_inscripcion'        => $inscripcion->fch_inscripcion,
-            ] : null;
-        }
-
-        // 3. RETORNA EL ARRAY COMPLETO
-        return $data;
     }
 }
