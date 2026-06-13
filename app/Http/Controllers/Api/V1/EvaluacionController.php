@@ -20,6 +20,37 @@ use Illuminate\Support\Facades\DB;
 
 class EvaluacionController extends Controller
 {
+    // GET /api/v1/evaluaciones/todas
+    // Devuelve TODAS las evaluaciones (de todos los postulantes) en
+    // una sola consulta, agrupadas por id_postulante. Usado por
+    // "Reportes Analíticos" (Por Materia / Promedios) para evitar
+    // hacer un fetch individual por cada postulante (N+1).
+    //
+    // Respuesta:
+    //   { success: true, data: { [id_postulante]: [ {int_nro_examen, detalles:[...]}, ... ] } }
+    public function todas(): JsonResponse
+    {
+        $evaluaciones = Evaluacion::with(['detalles'])
+            ->orderBy('id_postulante')
+            ->orderBy('int_nro_examen')
+            ->get();
+
+        $agrupado = $evaluaciones
+            ->groupBy('id_postulante')
+            ->map(fn($grupo) => $grupo->map(fn($ev) => [
+                'int_nro_examen' => $ev->int_nro_examen,
+                'detalles'       => $ev->detalles->map(fn($d) => [
+                    'id_materia' => $d->id_materia,
+                    'num_nota'   => (float) $d->num_nota,
+                ]),
+            ])->values());
+
+        return response()->json([
+            'success' => true,
+            'data'    => $agrupado,
+        ]);
+    }
+
     // GET /api/v1/evaluaciones?id_postulante=X
     // Devuelve los 3 exámenes del postulante con sus detalles por materia
     public function index(Request $request): JsonResponse

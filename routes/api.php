@@ -152,6 +152,8 @@ Route::prefix('v1')->group(function () {
             Route::get('profesiones', [ProfesionController::class, 'index']);
 
             // CU-21/22: Evaluaciones y notas
+            // evaluaciones/todas DEBE ir antes de evaluaciones/{id}/...
+            Route::get('evaluaciones/todas',                    [EvaluacionController::class, 'todas']);
             Route::get('evaluaciones',                           [EvaluacionController::class, 'index']);
             Route::post('evaluaciones',                          [EvaluacionController::class, 'store']);
             Route::put('evaluaciones/{id}/detalles',             [EvaluacionController::class, 'guardarDetalles']);

@@ -1229,6 +1229,19 @@
                             <tbody id="rep-lista-body" class="divide-y divide-slate-700/30 text-slate-300"></tbody>
                         </table>
                     </div>
+                    <div id="rep-lista-paginacion" class="hidden flex items-center justify-between px-5 py-3 border-t border-slate-700/50">
+                        <span id="rep-lista-pag-info" class="text-xs text-slate-500"></span>
+                        <div class="flex gap-2">
+                            <button id="rep-lista-btn-prev" onclick="repListaCambiarPagina(-1)"
+                                class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs transition cursor-pointer disabled:opacity-40">
+                                ← Anterior
+                            </button>
+                            <button id="rep-lista-btn-next" onclick="repListaCambiarPagina(1)"
+                                class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs transition cursor-pointer disabled:opacity-40">
+                                Siguiente →
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ── CU-29: Reporte de resultados ──────────────────── -->
@@ -2660,7 +2673,12 @@
     // Promedio = (Examen1 + Examen2 + Examen3) / 3
     // ─────────────────────────────────────────────────────────
     const UMBRAL = 60;
-    const REP    = { postulantes: [], grupos: [], evaluaciones: {} };
+    const REP = {
+        postulantes: [], grupos: [], evaluaciones: {},
+        resultados: [],          // cache del último cálculo (para paginación sin recalcular)
+        listaPagina: 1,
+        listaPorPagina: 50,
+    };
 
     // Helpers de cálculo
     function repPromMateria(evals, idMateria) {
@@ -2717,33 +2735,21 @@
 
         try {
             const h = authHeaders();
-            const [resP, resG, resM] = await Promise.all([
+            const [resP, resG, resM, resE] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=1000`, { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/grupos`,      { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/materias`,    { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/evaluaciones/todas`, { headers: h }),
             ]);
-            const [rP, rG, rM] = await Promise.all([resP.json(), resG.json(), resM.json()]);
+            const [rP, rG, rM, rE] = await Promise.all([resP.json(), resG.json(), resM.json(), resE.json()]);
 
             REP.postulantes = Array.isArray(rP.data) ? rP.data : (rP.data?.data ?? []);
             REP.grupos      = rG.data ?? [];
             REP.materias    = Array.isArray(rM.data) ? rM.data : (rM.data?.data ?? []);
 
-            // Cargar evaluaciones de cada postulante en lotes de 5
-            REP.evaluaciones = {};
-            const lote = 5;
-            for (let i = 0; i < REP.postulantes.length; i += lote) {
-                const batch = REP.postulantes.slice(i, i + lote);
-                await Promise.all(batch.map(async p => {
-                    try {
-                        const r = await fetch(
-                            `${API_BASE_URL}/api/v1/evaluaciones?id_postulante=${p.id_postulante}`,
-                            { headers: h }
-                        );
-                        const j = await r.json();
-                        REP.evaluaciones[p.id_postulante] = Array.isArray(j.data) ? j.data : (j.data?.data ?? []);
-                    } catch { REP.evaluaciones[p.id_postulante] = []; }
-                }));
-            }
+            // Evaluaciones de TODOS los postulantes, en una sola petición
+            // (evita el N+1 de antes: un fetch por postulante).
+            REP.evaluaciones = rE.data ?? {};
 
             reportesRenderizar();
 
@@ -2799,19 +2805,10 @@
         }
         document.getElementById('rep-indicadores').classList.remove('hidden');
 
-        // ── CU-28: Lista general ─────────────────────────────
-        document.getElementById('rep-lista-count').textContent = `${posts.length} postulantes`;
-        document.getElementById('rep-lista-body').innerHTML = resultados.map(r => `
-            <tr class="hover:bg-slate-800/20">
-                <td class="px-4 py-3 font-mono text-xs">${r.txt_ci ?? '—'}</td>
-                <td class="px-4 py-3 font-medium text-white">${r.txt_nombre ?? '—'}</td>
-                <td class="px-4 py-3 text-xs">${r.txt_ciudad ?? '—'}</td>
-                <td class="px-4 py-3 text-xs max-w-[120px] truncate">${r.txt_colegio ?? '—'}</td>
-                <td class="px-4 py-3 text-xs text-indigo-300">${r.carrera_1 ?? '—'}</td>
-                <td class="px-4 py-3 text-xs text-purple-300">${r.carrera_2 ?? '—'}</td>
-                <td class="px-4 py-3 text-center font-mono text-amber-300 text-xs">${r.promTotal != null ? r.promTotal.toFixed(2) : '—'}</td>
-                <td class="px-4 py-3 text-center">${r.tieneEval ? repBadge(r.admision) : '<span class="text-slate-600 text-xs">Sin eval.</span>'}</td>
-            </tr>`).join('');
+        // ── CU-28: Lista general (paginada en segmentos de 50) ──
+        REP.resultados = resultados;
+        REP.listaPagina = 1;
+        repRenderListaGeneral();
 
         // ── CU-29: Resultados ────────────────────────────────
         document.getElementById('rep-aprobados-count').textContent  = `${aprobados.length} estudiantes`;
@@ -2899,6 +2896,47 @@
         document.getElementById('rep-tabs').classList.remove('hidden');
         repMostrarSeccion('lista');
         lucide.createIcons();
+    }
+
+    // ── CU-28: Render de la Lista General, paginada (50/página) ──
+    function repRenderListaGeneral() {
+        const total   = REP.resultados.length;
+        const porPag  = REP.listaPorPagina;
+        const inicio  = (REP.listaPagina - 1) * porPag;
+        const pagina  = REP.resultados.slice(inicio, inicio + porPag);
+
+        document.getElementById('rep-lista-count').textContent = `${total} postulantes`;
+
+        document.getElementById('rep-lista-body').innerHTML = pagina.map(r => `
+            <tr class="hover:bg-slate-800/20">
+                <td class="px-4 py-3 font-mono text-xs">${r.txt_ci ?? '—'}</td>
+                <td class="px-4 py-3 font-medium text-white">${r.txt_nombre ?? '—'}</td>
+                <td class="px-4 py-3 text-xs">${r.txt_ciudad ?? '—'}</td>
+                <td class="px-4 py-3 text-xs max-w-[120px] truncate">${r.txt_colegio ?? '—'}</td>
+                <td class="px-4 py-3 text-xs text-indigo-300">${r.carrera_1 ?? '—'}</td>
+                <td class="px-4 py-3 text-xs text-purple-300">${r.carrera_2 ?? '—'}</td>
+                <td class="px-4 py-3 text-center font-mono text-amber-300 text-xs">${r.promTotal != null ? r.promTotal.toFixed(2) : '—'}</td>
+                <td class="px-4 py-3 text-center">${r.tieneEval ? repBadge(r.admision) : '<span class="text-slate-600 text-xs">Sin eval.</span>'}</td>
+            </tr>`).join('') || `<tr><td colspan="8" class="px-4 py-6 text-center text-slate-500 text-xs">Sin postulantes.</td></tr>`;
+
+        // Paginación
+        const totalPags = Math.max(1, Math.ceil(total / porPag));
+        const pagDiv = document.getElementById('rep-lista-paginacion');
+        if (totalPags > 1) {
+            pagDiv.classList.remove('hidden');
+            document.getElementById('rep-lista-pag-info').textContent =
+                `Página ${REP.listaPagina} de ${totalPags} · ${total} resultados`;
+            document.getElementById('rep-lista-btn-prev').disabled = REP.listaPagina <= 1;
+            document.getElementById('rep-lista-btn-next').disabled = REP.listaPagina >= totalPags;
+        } else {
+            pagDiv.classList.add('hidden');
+        }
+    }
+
+    function repListaCambiarPagina(delta) {
+        const totalPags = Math.max(1, Math.ceil(REP.resultados.length / REP.listaPorPagina));
+        REP.listaPagina = Math.max(1, Math.min(REP.listaPagina + delta, totalPags));
+        repRenderListaGeneral();
     }
 
     function repMostrarSeccion(nombre) {
