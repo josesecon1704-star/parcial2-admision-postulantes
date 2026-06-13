@@ -32,6 +32,7 @@ class Inscripcion extends Model
         'id_gestion',
         'txt_estado_inscripcion',
         'fch_inscripcion',
+        'id_grupo',
     ];
 
     protected $casts = [
