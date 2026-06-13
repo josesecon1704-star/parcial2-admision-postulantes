@@ -260,7 +260,7 @@
                 <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
                     <div>
                         <h2 class="text-2xl font-bold text-white tracking-tight">Postulantes — Añadir / Modificar</h2>
-                        <p class="text-sm text-slate-400">CU-06 Registrar · CU-07 Modificar datos · CU-08 Eliminar registro</p>
+                        <p class="text-sm text-slate-400">Registrar · Modificar datos · Eliminar registro</p>
                     </div>
                     <div class="h-10 w-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
                         <i data-lucide="pencil" class="h-5 w-5"></i>
@@ -272,7 +272,6 @@
                     <button onclick="toggleSection('sec-cu06', 'ico-cu06')"
                         class="w-full flex items-center justify-between px-6 py-4 border-b border-slate-700/50 hover:bg-slate-800/60 transition-all cursor-pointer">
                         <div class="flex items-center gap-3">
-                            <span class="px-2 py-0.5 rounded-md bg-blue-600/20 text-blue-400 text-[11px] font-bold tracking-wider">CU-06</span>
                             <h3 class="text-sm font-bold text-white">Registrar Nuevo Postulante</h3>
                         </div>
                         <i data-lucide="chevron-down" id="ico-cu06" class="h-4 w-4 text-slate-400 transition-transform duration-200 rotate-180"></i>
@@ -365,8 +364,6 @@
                 <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
                     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700/50">
                         <div class="flex items-center gap-3">
-                            <span class="px-2 py-0.5 rounded-md bg-amber-600/20 text-amber-400 text-[11px] font-bold tracking-wider">CU-07</span>
-                            <span class="px-2 py-0.5 rounded-md bg-red-600/20 text-red-400 text-[11px] font-bold tracking-wider">CU-08</span>
                             <h3 class="text-sm font-bold text-white">Modificar / Eliminar Postulante</h3>
                         </div>
                         <input type="text" id="buscar-post-edicion" placeholder="Buscar por CI o nombre..."
@@ -399,7 +396,6 @@
                 <div class="bg-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-700 overflow-hidden">
                     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700">
                         <div class="flex items-center gap-3">
-                            <span class="px-2 py-0.5 rounded-md bg-amber-600/20 text-amber-400 text-[11px] font-bold">CU-07</span>
                             <h2 class="text-white text-base font-bold">Modificar Datos del Postulante</h2>
                         </div>
                         <button onclick="cerrarModalPost()" class="text-slate-400 hover:text-white transition cursor-pointer">
@@ -578,7 +574,7 @@
                 <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
                     <div>
                         <h2 class="text-2xl font-bold text-white tracking-tight">Postulantes — Buscar</h2>
-                        <p class="text-sm text-slate-400">CU-09 Buscar · CU-10 Listar · CU-18 Ver por grupo</p>
+                        <p class="text-sm text-slate-400">Buscar · Listar · Ver por grupo</p>
                     </div>
                     <div class="h-10 w-10 rounded-xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
                         <i data-lucide="search" class="h-5 w-5"></i>
@@ -813,7 +809,7 @@
             <section id="mod-postulante-buscar" class="app-module hidden space-y-6 max-w-4xl mx-auto">
                 <div class="border-b border-slate-700/50 pb-4">
                     <h2 class="text-2xl font-bold text-white tracking-tight">Buscar Postulante</h2>
-                    <p class="text-sm text-slate-400">CU-09 — Búsqueda individual por nombre, CI u otros criterios.</p>
+                    <p class="text-sm text-slate-400">Búsqueda individual por nombre, CI u otros criterios.</p>
                 </div>
                 <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-500">
                     <i data-lucide="search" class="h-10 w-10 mx-auto mb-3 text-blue-500/50"></i>
@@ -827,7 +823,7 @@
             <section id="mod-postulante-por-grupo" class="app-module hidden space-y-6 max-w-5xl mx-auto">
                 <div class="border-b border-slate-700/50 pb-4">
                     <h2 class="text-2xl font-bold text-white tracking-tight">Estudiantes por Grupo</h2>
-                    <p class="text-sm text-slate-400">CU-18 — Listar postulantes filtrados por grupo con campo de grupo adicional.</p>
+                    <p class="text-sm text-slate-400">Listar postulantes filtrados por grupo con campo de grupo adicional.</p>
                 </div>
                 <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-500">
                     <i data-lucide="layers" class="h-10 w-10 mx-auto mb-3 text-indigo-500/50"></i>
@@ -841,7 +837,7 @@
             <section id="mod-postulante-modificar" class="app-module hidden space-y-6 max-w-4xl mx-auto">
                 <div class="border-b border-slate-700/50 pb-4">
                     <h2 class="text-2xl font-bold text-white tracking-tight">Modificar Datos del Postulante</h2>
-                    <p class="text-sm text-slate-400">CU-07 — Edición de datos de un postulante ya registrado.</p>
+                    <p class="text-sm text-slate-400">Edición de datos de un postulante ya registrado.</p>
                 </div>
                 <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-500">
                     <i data-lucide="user-pen" class="h-10 w-10 mx-auto mb-3 text-amber-500/50"></i>
@@ -855,7 +851,7 @@
             <section id="mod-postulante-eliminar" class="app-module hidden space-y-6 max-w-4xl mx-auto">
                 <div class="border-b border-slate-700/50 pb-4">
                     <h2 class="text-2xl font-bold text-white tracking-tight">Eliminar Registro de Postulante</h2>
-                    <p class="text-sm text-slate-400">CU-08 — Eliminación controlada de postulantes sin inscripciones activas.</p>
+                    <p class="text-sm text-slate-400">Eliminación controlada de postulantes sin inscripciones activas.</p>
                 </div>
                 <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-500">
                     <i data-lucide="trash-2" class="h-10 w-10 mx-auto mb-3 text-red-500/50"></i>
@@ -869,7 +865,7 @@
             <section id="mod-postulante-asignar" class="app-module hidden space-y-6 max-w-4xl mx-auto">
                 <div class="border-b border-slate-700/50 pb-4">
                     <h2 class="text-2xl font-bold text-white tracking-tight">Asignar Postulantes</h2>
-                    <p class="text-sm text-slate-400">CU-20 — Asignación de postulantes a grupos del CUP.</p>
+                    <p class="text-sm text-slate-400">Asignación de postulantes a grupos del CUP.</p>
                 </div>
                 <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-500">
                     <i data-lucide="user-check" class="h-10 w-10 mx-auto mb-3 text-emerald-500/50"></i>
@@ -884,7 +880,7 @@
                 <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
                     <div>
                         <h2 class="text-2xl font-bold text-white tracking-tight">Asignar Docente a Grupo</h2>
-                        <p class="text-sm text-slate-400">CU-19 — Busca por CI, confirma datos del docente y selecciona grupo + materia.</p>
+                        <p class="text-sm text-slate-400">Busca por CI, confirma datos del docente y selecciona grupo + materia.</p>
                     </div>
                     <div class="h-10 w-10 rounded-xl bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                         <i data-lucide="user-round-check" class="h-5 w-5"></i>
@@ -1013,7 +1009,7 @@
                 <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
                     <div>
                         <h2 class="text-2xl font-bold text-white tracking-tight">Modificar — Notas</h2>
-                        <p class="text-sm text-slate-400">CU-21 Registrar · CU-22 Editar — Computación, Matemáticas, Inglés, Física</p>
+                        <p class="text-sm text-slate-400">Registrar · Editar notas — Computación, Matemáticas, Inglés, Física</p>
                     </div>
                     <div class="h-10 w-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
                         <i data-lucide="clipboard-pen" class="h-5 w-5"></i>
@@ -1164,7 +1160,7 @@
                 <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
                     <div>
                         <h2 class="text-2xl font-bold text-white tracking-tight">Reportes Analíticos</h2>
-                        <p class="text-sm text-slate-400">CU-28 al CU-34 — Aprobación: promedio por materia ≥ 60 en los 3 exámenes</p>
+                        <p class="text-sm text-slate-400">Aprobación: las 12 notas (3 exámenes x 4 materias) ≥ 60</p>
                     </div>
                     <button onclick="reportesCargar()" id="rep-btn-actualizar"
                         class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl flex items-center gap-2 transition-all cursor-pointer shrink-0">
@@ -1223,7 +1219,7 @@
                 <!-- ── CU-28: Lista general de postulantes ───────────── -->
                 <div id="rep-sec-lista" class="rep-sec hidden bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-700/50 flex items-center justify-between">
-                        <h3 class="text-sm font-bold text-white">CU-28 — Lista General de Postulantes</h3>
+                        <h3 class="text-sm font-bold text-white">Lista General de Postulantes</h3>
                         <span id="rep-lista-count" class="text-xs text-slate-400"></span>
                     </div>
                     <div class="overflow-x-auto">
@@ -1307,8 +1303,8 @@
                 <!-- ── CU-30: Promedios generales ────────────────────── -->
                 <div id="rep-sec-promedios" class="rep-sec hidden bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-700/50">
-                        <h3 class="text-sm font-bold text-white">CU-30 — Promedios por Postulante</h3>
-                        <p class="text-xs text-slate-500 mt-0.5">Promedio = (E1 + E2 + E3) / 3 por materia · Aprobado si todas las materias ≥ 60</p>
+                        <h3 class="text-sm font-bold text-white">Promedios por Postulante</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Promedio por materia = (E1 + E2 + E3) / 3 · Aprobado si las 12 notas (3 exámenes x 4 materias) son ≥ 60</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
@@ -1331,7 +1327,7 @@
                 <!-- ── CU-31: Grupos habilitados ─────────────────────── -->
                 <div id="rep-sec-grupos" class="rep-sec hidden bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-700/50">
-                        <h3 class="text-sm font-bold text-white">CU-31 — Grupos Habilitados</h3>
+                        <h3 class="text-sm font-bold text-white">Grupos Habilitados</h3>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
@@ -1353,7 +1349,7 @@
                 <!-- ── CU-32: Estadísticas por materia ───────────────── -->
                 <div id="rep-sec-materias" class="rep-sec hidden bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-700/50">
-                        <h3 class="text-sm font-bold text-white">CU-32 — Estadísticas por Materia</h3>
+                        <h3 class="text-sm font-bold text-white">Estadísticas por Materia</h3>
                         <p class="text-xs text-slate-500 mt-0.5">Aprobado por materia = promedio ≥ 60</p>
                     </div>
                     <div class="overflow-x-auto">
@@ -1376,7 +1372,7 @@
                 <!-- ── CU-33: Docentes por grupo ─────────────────────── -->
                 <div id="rep-sec-docentes" class="rep-sec hidden bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-700/50">
-                        <h3 class="text-sm font-bold text-white">CU-33 — Docentes por Grupo</h3>
+                        <h3 class="text-sm font-bold text-white">Docentes por Grupo</h3>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
