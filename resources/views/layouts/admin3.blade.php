@@ -785,8 +785,10 @@
                     <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider pb-2 border-b border-slate-700/50 mt-2">Profesión</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="space-y-1.5">
-                            <label class="text-xs text-slate-400 uppercase font-bold">ID Profesión</label>
-                            <input type="number" id="doc_id_profesion" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                            <label class="text-xs text-slate-400 uppercase font-bold">Profesión</label>
+                            <select id="doc_id_profesion" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                                <option value="">— Selecciona una profesión —</option>
+                            </select>
                         </div>
                         <div class="space-y-1.5">
                             <label class="text-xs text-slate-400 uppercase font-bold">Título Obtenido</label>
@@ -2247,6 +2249,21 @@
     function loadPostulantes() { pbCargar(); }
 
     // ─────────────────────────────────────────────────────────
+    // ── Cargar profesiones en el select del formulario de docente ──
+    async function loadProfesiones() {
+        const sel = document.getElementById('doc_id_profesion');
+        if (!sel) return;
+        try {
+            const res    = await fetch(`${API_BASE_URL}/api/v1/profesiones`, { headers: authHeaders() });
+            const result = await res.json();
+            const lista  = Array.isArray(result.data) ? result.data : (result.data?.data ?? []);
+            sel.innerHTML = '<option value="">— Selecciona una profesión —</option>' +
+                lista.map(p => `<option value="${p.id_profesion}">${p.txt_descripcion ?? p.txt_nombre ?? p.txt_descripcion_profesion ?? 'Profesión ' + p.id_profesion}</option>`).join('');
+        } catch (err) {
+            console.error('loadProfesiones:', err);
+        }
+    }
+
     // MÓDULO: REGISTRAR DOCENTE (CU-12)
     // ─────────────────────────────────────────────────────────
     async function guardarDocente() {
