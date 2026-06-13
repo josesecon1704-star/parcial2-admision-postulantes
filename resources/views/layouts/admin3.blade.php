@@ -346,6 +346,45 @@
                                 </div>
                             </div>
 
+                            <!-- Carreras de preferencia -->
+                            <div class="border-t border-slate-700/50 pt-5">
+                                <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2 mb-3">
+                                    <i data-lucide="graduation-cap" class="h-4 w-4"></i>
+                                    Carreras de Preferencia
+                                </h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="field-label text-xs text-slate-400">1RA OPCIÓN <span class="text-red-400">*</span></label>
+                                        <select id="reg-carrera-1" required
+                                            class="field-input w-full bg-slate-950 border border-slate-700/60 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-all">
+                                            <option value="">— Selecciona 1ra opción —</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="field-label text-xs text-slate-400">2DA OPCIÓN <span class="text-red-400">*</span></label>
+                                        <select id="reg-carrera-2" required
+                                            class="field-input w-full bg-slate-950 border border-slate-700/60 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-all">
+                                            <option value="">— Selecciona 2da opción —</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grupo -->
+                            <div class="border-t border-slate-700/50 pt-5">
+                                <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2 mb-3">
+                                    <i data-lucide="users" class="h-4 w-4"></i>
+                                    Grupo Asignado
+                                </h4>
+                                <div class="space-y-1.5">
+                                    <label class="field-label text-xs text-slate-400">Grupo</label>
+                                    <select id="reg-grupo"
+                                        class="field-input w-full bg-slate-950 border border-slate-700/60 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-all">
+                                        <option value="">— Sin grupo asignado —</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="flex items-center justify-end gap-3 pt-5 border-t border-slate-700/50">
                                 <button type="reset"
                                     class="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 text-sm font-medium transition-all flex items-center gap-2 cursor-pointer">
@@ -1634,26 +1673,52 @@
     // MÓDULO: POST-EDICION — CU-06 Registrar · CU-07 Modificar · CU-08 Eliminar
     // ─────────────────────────────────────────────────────────
 
-    // ── Cargar requisitos físicos desde la API (tbl_requisito) ──
+    // ── Cargar requisitos, carreras y grupos para el formulario de registro ──
     async function loadRequisitos() {
+        const h = authHeaders();
+
+        // Requisitos
         const cont = document.getElementById('lista-requisitos');
-        if (!cont) return;
         try {
-            const res    = await fetch(`${API_BASE_URL}/api/v1/requisitos`, { headers: authHeaders() });
+            const res    = await fetch(`${API_BASE_URL}/api/v1/requisitos`, { headers: h });
             const result = await res.json();
             const lista  = Array.isArray(result.data) ? result.data : (result.data?.data ?? []);
             if (!lista.length) {
                 cont.innerHTML = '<p class="text-slate-500 text-xs col-span-2">No hay requisitos configurados.</p>';
-                return;
+            } else {
+                cont.innerHTML = lista.map(r => `
+                    <label class="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:border-amber-500/40 transition-all">
+                        <input type="checkbox" name="requisito" value="${r.id_requisito}"
+                            class="h-4 w-4 rounded accent-amber-500 cursor-pointer">
+                        <span class="text-xs text-slate-300">${r.txt_descripcion_requisito}</span>
+                    </label>`).join('');
             }
-            cont.innerHTML = lista.map(r => `
-                <label class="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer hover:border-amber-500/40 transition-all">
-                    <input type="checkbox" name="requisito" value="${r.id_requisito}"
-                        class="h-4 w-4 rounded accent-amber-500 cursor-pointer">
-                    <span class="text-xs text-slate-300">${r.txt_descripcion_requisito}</span>
-                </label>`).join('');
         } catch (err) {
             cont.innerHTML = '<p class="text-red-400 text-xs col-span-2">Error al cargar requisitos.</p>';
+        }
+
+        // Carreras
+        try {
+            const res    = await fetch(`${API_BASE_URL}/api/v1/carreras`, { headers: h });
+            const result = await res.json();
+            const carreras = Array.isArray(result.data) ? result.data : (result.data?.data ?? []);
+            const opts = carreras.map(c => `<option value="${c.id_carrera}">${c.txt_nombre}</option>`).join('');
+            document.getElementById('reg-carrera-1').innerHTML = `<option value="">— Selecciona 1ra opción —</option>${opts}`;
+            document.getElementById('reg-carrera-2').innerHTML = `<option value="">— Selecciona 2da opción —</option>${opts}`;
+        } catch (err) {
+            console.error('loadRequisitos: carreras', err);
+        }
+
+        // Grupos
+        try {
+            const res    = await fetch(`${API_BASE_URL}/api/v1/grupos`, { headers: h });
+            const result = await res.json();
+            const grupos = Array.isArray(result.data) ? result.data : (result.data?.data ?? []);
+            const sel = document.getElementById('reg-grupo');
+            sel.innerHTML = '<option value="">— Sin grupo asignado —</option>' +
+                grupos.map(g => `<option value="${g.id_grupo}">${g.txt_nombre} (${g.int_cantidad_estudiantes}/${g.int_capacidad_maxma})</option>`).join('');
+        } catch (err) {
+            console.error('loadRequisitos: grupos', err);
         }
     }
 
@@ -1663,6 +1728,10 @@
         const btn = document.getElementById('btn-registrar-postulante');
         const requisitosSeleccionados = [...document.querySelectorAll('input[name="requisito"]:checked')]
             .map(cb => parseInt(cb.value));
+
+        const c1 = document.getElementById('reg-carrera-1').value;
+        const c2 = document.getElementById('reg-carrera-2').value;
+        const grupo = document.getElementById('reg-grupo').value;
 
         const datos = {
             txt_ci:         document.getElementById('txt_ci').value.trim(),
@@ -1675,6 +1744,11 @@
             txt_ciudad:     document.getElementById('txt_ciudad').value.trim()  || null,
             txt_direccion:  document.getElementById('txt_direccion').value.trim() || null,
             requisitos:     requisitosSeleccionados,
+            carreras: c1 && c2 ? [
+                { id_carrera: parseInt(c1), int_prioridad: 1 },
+                { id_carrera: parseInt(c2), int_prioridad: 2 },
+            ] : [],
+            id_grupo: grupo ? parseInt(grupo) : null,
         };
         try {
             btn.disabled = true;
