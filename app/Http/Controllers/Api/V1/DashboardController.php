@@ -3,56 +3,56 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\AdmisionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly AdmisionService $admision
+    ) {}
+
     /**
      * Obtener las métricas globales para el Dashboard de Admisión de la FICCT.
      * GET /api/v1/dashboard/metrics
+     *
+     * 'aprobados'  = postulantes con las 12 notas (3 exámenes x 4 materias)
+     *                completas y TODAS >= 60 (AdmisionService).
+     * 'reprobados' = inscritos - aprobados (incluye reprobados reales y
+     *                quienes aún no tienen evaluaciones registradas).
+     * 'aceptados'  = aprobados que además consiguieron cupo en su
+     *                carrera_1 o carrera_2 (txt_resultado ADMITIDO_*).
      */
     public function getMetrics(): JsonResponse
     {
         try {
-            // 1. Total Inscritos / Postulantes (Seguro y directo)
+            // 1. Total Inscritos / Postulantes
             $inscritos = DB::table('tbl_postulante')->count();
 
             // 2. Total Grupos Habilitados
             $grupos = DB::table('tbl_grupo')->count();
 
-            // 3. Inicializar contadores de rendimiento académico
-            $aprobados = 0;
-            $reprobados = 0;
+            // 3. Resultados reales de admisión (AdmisionService)
+            $resultados = $this->admision->calcularResultados();
 
-            // --- DETECTOR INTELIGENTE DE COLUMNAS (Para evitar el SQLSTATE[42703]) ---
-            if (Schema::hasColumn('tbl_postulante', 'txt_estado')) {
-                // Opción A: Si existe una columna directa de estado de texto
-                $aprobados = DB::table('tbl_postulante')->where('txt_estado', 'APROBADO')->count();
-                $reprobados = DB::table('tbl_postulante')->where('txt_estado', 'REPROBADO')->count();
-            } 
-            elseif (Schema::hasColumn('tbl_postulante', 'bol_aprobado')) {
-                // Opción B: Si tu lógica maneja un booleano verdadero/falso
-                $aprobados = DB::table('tbl_postulante')->where('bol_aprobado', true)->count();
-                $reprobados = DB::table('tbl_postulante')->where('bol_aprobado', false)->count();
-            } 
-            else {
-                // Opción C (Simulación segura): Si las notas están en otra tabla relacional 
-                // Distribuye de forma representativa basada en tus inscritos reales para que no muestre 0
-                $aprobados = (int) ($inscritos * 0.65); 
-                $reprobados = $inscritos - $aprobados;
-            }
+            $aprobados = $resultados->filter(fn($r) => $r['aprobado'] === true)->count();
+            $aceptados = $resultados->filter(fn($r) => in_array(
+                $r['txt_resultado'],
+                ['ADMITIDO_CARRERA_1', 'ADMITIDO_CARRERA_2'],
+                true
+            ))->count();
+            $reprobados = $inscritos - $aprobados;
 
-            // Responder exactamente con la estructura que el Javascript requiere
             return response()->json([
                 'success' => true,
                 'message' => 'Métricas procesadas correctamente desde PostgreSQL.',
                 'data' => [
                     'inscritos'  => $inscritos,
                     'aprobados'  => $aprobados,
+                    'aceptados'  => $aceptados,
                     'reprobados' => $reprobados,
-                    'grupos'     => $grupos
+                    'grupos'     => $grupos,
                 ]
             ], 200);
 

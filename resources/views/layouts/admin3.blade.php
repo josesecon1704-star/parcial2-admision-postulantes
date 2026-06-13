@@ -167,7 +167,7 @@
                     <h2 class="text-2xl font-bold text-white tracking-tight mb-2">Panel de Control de Admisión (CUP)</h2>
                     <p class="text-sm text-slate-400 max-w-2xl leading-relaxed">Monitoreo estadístico y administración centralizada del proceso de admisión preuniversitario para la facultad.</p>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 flex items-center gap-5 shadow-lg">
                         <div class="h-12 w-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0"><i data-lucide="users" class="h-5 w-5"></i></div>
                         <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Inscritos</p><p id="stat-inscritos" class="text-3xl font-bold text-white mt-1">—</p></div>
@@ -175,6 +175,10 @@
                     <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 flex items-center gap-5 shadow-lg">
                         <div class="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0"><i data-lucide="check-circle" class="h-5 w-5"></i></div>
                         <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Aprobados</p><p id="stat-aprobados" class="text-3xl font-bold text-emerald-400 mt-1">—</p></div>
+                    </div>
+                    <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 flex items-center gap-5 shadow-lg">
+                        <div class="h-12 w-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0"><i data-lucide="graduation-cap" class="h-5 w-5"></i></div>
+                        <div><p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Aceptados</p><p id="stat-aceptados" class="text-3xl font-bold text-indigo-400 mt-1">—</p></div>
                     </div>
                     <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 flex items-center gap-5 shadow-lg">
                         <div class="h-12 w-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0"><i data-lucide="x-circle" class="h-5 w-5"></i></div>
@@ -1175,7 +1179,7 @@
                 </div>
 
                 <!-- ── CU-34: Indicadores (tarjetas rápidas) ─────────── -->
-                <div id="rep-indicadores" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div id="rep-indicadores" class="hidden grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 text-center">
                         <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-2">Total Inscritos</p>
                         <p id="rep-ind-total" class="text-4xl font-black text-white">—</p>
@@ -1184,6 +1188,10 @@
                         <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-2">Aprobados</p>
                         <p id="rep-ind-aprobados" class="text-4xl font-black text-emerald-400">—</p>
                         <p id="rep-ind-aprobados-pct" class="text-xs text-slate-500 mt-1"></p>
+                    </div>
+                    <div class="bg-slate-800/40 border border-indigo-500/20 rounded-2xl p-5 text-center">
+                        <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-2">Aceptados</p>
+                        <p id="rep-ind-aceptados" class="text-4xl font-black text-indigo-400">—</p>
                     </div>
                     <div class="bg-slate-800/40 border border-red-500/20 rounded-2xl p-5 text-center">
                         <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-2">Reprobados</p>
@@ -1526,7 +1534,7 @@
     }
 
     function fallbackStats() {
-        ['stat-inscritos', 'stat-aprobados', 'stat-reprobados', 'stat-grupos']
+        ['stat-inscritos', 'stat-aprobados', 'stat-aceptados', 'stat-reprobados', 'stat-grupos']
             .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '0'; });
     }
 
@@ -1542,6 +1550,7 @@
                 const m = result.data;
                 document.getElementById('stat-inscritos').textContent  = m.inscritos  ?? 0;
                 document.getElementById('stat-aprobados').textContent  = m.aprobados  ?? 0;
+                document.getElementById('stat-aceptados').textContent  = m.aceptados  ?? 0;
                 document.getElementById('stat-reprobados').textContent = m.reprobados ?? 0;
                 document.getElementById('stat-grupos').textContent     = m.grupos     ?? 0;
             } else {
@@ -1946,7 +1955,7 @@
 
             // Gestiones no tiene endpoint propio aún — se carga solo grupos
             const [resP, resG] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=1000`, { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=2000`, { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/grupos`,      { headers: h }),
             ]);
             const [rP, rG] = await Promise.all([resP.json(), resG.json()]);
@@ -2742,7 +2751,7 @@
         try {
             const h = authHeaders();
             const [resP, resG, resM, resE, resC] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=1000`, { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=2000`, { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/grupos`,      { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/materias`,    { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/evaluaciones/todas`, { headers: h }),
@@ -2799,12 +2808,17 @@
         });
 
         const aprobados   = resultados.filter(r => r.aprobado);
+        const aceptados   = resultados.filter(r =>
+            r.admision?.txt_resultado === 'ADMITIDO_CARRERA_1' ||
+            r.admision?.txt_resultado === 'ADMITIDO_CARRERA_2'
+        );
         const reprobados  = resultados.filter(r => !r.aprobado);
         const totalConEval = resultados.filter(r => r.tieneEval).length;
 
         // ── CU-34: Indicadores ───────────────────────────────
         document.getElementById('rep-ind-total').textContent      = posts.length;
         document.getElementById('rep-ind-aprobados').textContent  = aprobados.length;
+        document.getElementById('rep-ind-aceptados').textContent  = aceptados.length;
         document.getElementById('rep-ind-reprobados').textContent = reprobados.length;
         document.getElementById('rep-ind-grupos').textContent     = grupos.length;
         if (totalConEval > 0) {
