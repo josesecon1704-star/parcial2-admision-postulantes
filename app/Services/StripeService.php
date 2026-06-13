@@ -116,6 +116,11 @@ class StripeService
             'txt_referencia' => $session->payment_intent ?? $session->id,
             'fch_pago'       => now(),
         ]);
+
+        // Actualizar el estado de la inscripción a PROCESADO
+        // (el postulante completó el proceso: registrado + pagado)
+        \App\Models\Inscripcion::where('id_inscripcion', $idInscripcion)
+            ->update(['txt_estado_inscripcion' => 'PROCESADO']);
     }
 
     /**

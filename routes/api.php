@@ -85,9 +85,15 @@ Route::prefix('v1')->group(function () {
     // ════════════════════════════════════════════════════════
     Route::middleware('jwt.auth')->group(function () {
         Route::get('dashboard/metrics', [DashboardController::class, 'getMetrics']);
-        Route::get('aulas',    [AulaController::class,    'index']);
-        Route::get('materias', [MateriaController::class, 'index']);
-        Route::get('carreras', [CarreraController::class, 'index']);
+        Route::get('aulas',      [AulaController::class,    'index']);
+        Route::get('materias',   [MateriaController::class, 'index']);
+        Route::get('carreras',   [CarreraController::class, 'index']);
+        Route::get('requisitos', fn() => response()->json([
+            'success' => true,
+            'data'    => \Illuminate\Support\Facades\DB::table('tbl_requisito')
+                ->orderBy('id_requisito')
+                ->get(['id_requisito', 'txt_descripcion_requisito']),
+        ]));
         // ── Solo ADMINISTRADOR ──────────────────────────────
         Route::middleware('role:ADMINISTRADOR')->group(function () {
 
