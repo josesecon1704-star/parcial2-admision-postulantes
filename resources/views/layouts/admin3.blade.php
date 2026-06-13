@@ -1222,6 +1222,7 @@
                                     <th class="px-4 py-3">Colegio</th>
                                     <th class="px-4 py-3">1ra Opción</th>
                                     <th class="px-4 py-3">2da Opción</th>
+                                    <th class="px-4 py-3 text-center text-amber-400">Nota Final</th>
                                     <th class="px-4 py-3 text-center">Resultado</th>
                                 </tr>
                             </thead>
@@ -2680,10 +2681,23 @@
         });
     }
 
-    function repBadge(aprobado) {
-        return aprobado
-            ? '<span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">APROBADO</span>'
-            : '<span class="px-2 py-0.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold">REPROBADO</span>';
+    function repBadge(admision) {
+        const clases = {
+            ADMITIDO_CARRERA_1: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+            ADMITIDO_CARRERA_2: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+            NO_ADMITIDO:        'bg-red-500/10 text-red-400 border-red-500/20',
+            NO_APROBADO:        'bg-slate-700/40 text-slate-400 border-slate-600/30',
+        };
+        const labels = {
+            ADMITIDO_CARRERA_1: 'ADMITIDO (1ra)',
+            ADMITIDO_CARRERA_2: 'ADMITIDO (2da)',
+            NO_ADMITIDO:        'NO ADMITIDO',
+            NO_APROBADO:        'REPROBADO',
+        };
+        const resultado = admision?.txt_resultado ?? 'NO_APROBADO';
+        const cls   = clases[resultado] ?? clases.NO_APROBADO;
+        const label = labels[resultado] ?? '—';
+        return `<span class="px-2 py-0.5 rounded-md ${cls} border text-[10px] font-bold">${label}</span>`;
     }
 
     function repCelda(prom) {
@@ -2704,7 +2718,7 @@
         try {
             const h = authHeaders();
             const [resP, resG, resM] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/postulantes`, { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=1000`, { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/grupos`,      { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/materias`,    { headers: h }),
             ]);
@@ -2751,21 +2765,28 @@
         // Calcular aprobación de cada postulante
         const resultados = posts.map(p => {
             const evs     = evals[p.id_postulante] ?? [];
-            const aprobado = evs.length > 0 && repEsAprobado(evs, mats);
             const promsMateria = mats.map(m => ({
                 id: m.id_materia, nombre: m.txt_nombre,
                 prom: repPromMateria(evs, m.id_materia),
             }));
-            const promGeneral = promsMateria.map(m => m.prom).filter(v => v != null);
-            const promTotal   = promGeneral.length
-                ? promGeneral.reduce((a, b) => a + b, 0) / promGeneral.length
-                : null;
-            return { ...p, aprobado, promsMateria, promTotal, evs };
+
+            // Resultado de admisión (AdmisionService) — fuente única de
+            // verdad para aprobado/reprobado y nota final (CU-28/29/34).
+            // promsMateria/evs se mantienen solo para las pestañas
+            // "Promedios" (CU-30) y "Por Materia" (CU-32).
+            const adm = p.admision ?? {};
+            const aprobado  = adm.aprobado === true;
+            const promTotal = adm.nota_final != null ? Number(adm.nota_final) : null;
+            const tieneEval = adm.txt_resultado && adm.txt_resultado !== 'NO_APROBADO'
+                ? true
+                : (evs.length > 0);
+
+            return { ...p, aprobado, promsMateria, promTotal, evs, admision: adm, tieneEval };
         });
 
         const aprobados   = resultados.filter(r => r.aprobado);
         const reprobados  = resultados.filter(r => !r.aprobado);
-        const totalConEval = resultados.filter(r => r.evs.length > 0).length;
+        const totalConEval = resultados.filter(r => r.tieneEval).length;
 
         // ── CU-34: Indicadores ───────────────────────────────
         document.getElementById('rep-ind-total').textContent      = posts.length;
@@ -2788,7 +2809,8 @@
                 <td class="px-4 py-3 text-xs max-w-[120px] truncate">${r.txt_colegio ?? '—'}</td>
                 <td class="px-4 py-3 text-xs text-indigo-300">${r.carrera_1 ?? '—'}</td>
                 <td class="px-4 py-3 text-xs text-purple-300">${r.carrera_2 ?? '—'}</td>
-                <td class="px-4 py-3 text-center">${r.evs.length ? repBadge(r.aprobado) : '<span class="text-slate-600 text-xs">Sin eval.</span>'}</td>
+                <td class="px-4 py-3 text-center font-mono text-amber-300 text-xs">${r.promTotal != null ? r.promTotal.toFixed(2) : '—'}</td>
+                <td class="px-4 py-3 text-center">${r.tieneEval ? repBadge(r.admision) : '<span class="text-slate-600 text-xs">Sin eval.</span>'}</td>
             </tr>`).join('');
 
         // ── CU-29: Resultados ────────────────────────────────
@@ -2815,7 +2837,7 @@
                 <td class="px-4 py-3 font-medium text-white text-xs">${r.txt_nombre}</td>
                 ${cols}
                 <td class="px-4 py-3 text-center font-bold">${repCelda(r.promTotal)}</td>
-                <td class="px-4 py-3 text-center">${r.evs.length ? repBadge(r.aprobado) : '<span class="text-slate-600 text-xs">—</span>'}</td>
+                <td class="px-4 py-3 text-center">${r.tieneEval ? repBadge(r.admision) : '<span class="text-slate-600 text-xs">—</span>'}</td>
             </tr>`;
         }).join('');
 
