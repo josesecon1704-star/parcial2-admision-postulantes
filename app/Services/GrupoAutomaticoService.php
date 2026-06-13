@@ -45,14 +45,19 @@ class GrupoAutomaticoService
      */
     public function crear(int $idTurno): Grupo
     {
-        // 1. Nombre y número de grupo
-        $nroGrupo = (int) (Grupo::max('id_grupo') ?? 0) + 1;
-
+        // 1. Crear el grupo primero (nombre temporal) y luego renombrar
+        // usando el id_grupo REAL asignado por la secuencia de la BD.
+        // No usamos MAX(id_grupo)+1 para el nombre porque puede
+        // desincronizarse de la secuencia real si hubo inserts
+        // fallidos previos (la secuencia de PostgreSQL avanza aunque
+        // el INSERT se revierta).
         $grupo = Grupo::create([
-            'txt_nombre'               => "Grupo {$nroGrupo}",
+            'txt_nombre'               => 'Grupo (nuevo)',
             'int_cantidad_estudiantes' => 0,
             'int_capacidad_maxma'      => 70,
         ]);
+
+        $grupo->update(['txt_nombre' => "Grupo {$grupo->id_grupo}"]);
 
         // 2. Horarios del turno (20 filas: 5 días x 4 bloques)
         $horariosTurno = DB::table('tbl_horario')
