@@ -31,7 +31,8 @@ use Illuminate\Support\Facades\DB;
 class PublicController extends Controller
 {
     public function __construct(
-        private readonly PostulanteService $service
+        private readonly PostulanteService $service,
+        private readonly \App\Services\GrupoAutomaticoService $grupoAutomatico
     ) {}
 
     /**
@@ -139,11 +140,9 @@ class PublicController extends Controller
                 ->first();
 
             if (! $grupo) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No hay cupo disponible en el turno seleccionado. Por favor contacta a secretaría.',
-                ], 409);
+                // No hay ningún grupo con cupo en este turno: crear uno
+                // nuevo automáticamente (horario + aula + docentes).
+                $grupo = $this->grupoAutomatico->crear((int) $request->id_turno);
             }
 
             // 1. Crear postulante
