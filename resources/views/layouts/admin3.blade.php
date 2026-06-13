@@ -1196,6 +1196,12 @@
                     </div>
                 </div>
 
+                <!-- Cupos por carrera (resultado de AdmisionService) -->
+                <div id="rep-cupos-card" class="hidden bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5">
+                    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-3">Cupos de Admisión por Carrera</p>
+                    <div id="rep-cupos-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+                </div>
+
                 <!-- Tabs de reportes -->
                 <div id="rep-tabs" class="hidden flex flex-wrap gap-2">
                     <button onclick="repMostrarSeccion('lista')"     data-rep="lista"     class="rep-tab px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer bg-slate-800 text-slate-400 hover:text-white">📋 Lista General</button>
@@ -2735,17 +2741,19 @@
 
         try {
             const h = authHeaders();
-            const [resP, resG, resM, resE] = await Promise.all([
+            const [resP, resG, resM, resE, resC] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/v1/postulantes?per_page=1000`, { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/grupos`,      { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/materias`,    { headers: h }),
                 fetch(`${API_BASE_URL}/api/v1/evaluaciones/todas`, { headers: h }),
+                fetch(`${API_BASE_URL}/api/v1/admision/resumen-cupos`, { headers: h }),
             ]);
-            const [rP, rG, rM, rE] = await Promise.all([resP.json(), resG.json(), resM.json(), resE.json()]);
+            const [rP, rG, rM, rE, rC] = await Promise.all([resP.json(), resG.json(), resM.json(), resE.json(), resC.json()]);
 
             REP.postulantes = Array.isArray(rP.data) ? rP.data : (rP.data?.data ?? []);
             REP.grupos      = rG.data ?? [];
             REP.materias    = Array.isArray(rM.data) ? rM.data : (rM.data?.data ?? []);
+            REP.cupos       = Array.isArray(rC.data) ? rC.data : [];
 
             // Evaluaciones de TODOS los postulantes, en una sola petición
             // (evita el N+1 de antes: un fetch por postulante).
@@ -2804,6 +2812,23 @@
             document.getElementById('rep-ind-reprobados-pct').textContent = `${((reprobados.length / totalConEval) * 100).toFixed(1)}%`;
         }
         document.getElementById('rep-indicadores').classList.remove('hidden');
+
+        // ── Cupos por carrera (AdmisionService) ──────────────
+        if (REP.cupos && REP.cupos.length) {
+            document.getElementById('rep-cupos-grid').innerHTML = REP.cupos.map(c => {
+                const cls = c.lleno
+                    ? 'border-red-500/30 text-red-400'
+                    : 'border-emerald-500/30 text-emerald-400';
+                const estado = c.lleno ? 'lleno' : 'con espacio';
+                return `
+                    <div class="bg-slate-900 rounded-xl border ${cls} p-3">
+                        <p class="text-xs font-bold text-white truncate" title="${c.txt_nombre}">${c.txt_nombre}</p>
+                        <p class="text-lg font-black mt-1">${c.usado}<span class="text-slate-500 text-sm font-normal">/${c.total}</span></p>
+                        <p class="text-[10px] uppercase font-bold tracking-wider mt-0.5">${estado}</p>
+                    </div>`;
+            }).join('');
+            document.getElementById('rep-cupos-card').classList.remove('hidden');
+        }
 
         // ── CU-28: Lista general (paginada en segmentos de 50) ──
         REP.resultados = resultados;

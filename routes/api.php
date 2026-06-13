@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\AulaController;
 use App\Http\Controllers\Api\V1\CarreraController;
 use App\Http\Controllers\Api\V1\DocenteController;
 use App\Http\Controllers\Api\V1\EvaluacionController;
+use App\Http\Controllers\Api\V1\AdmisionController;
 use App\Http\Controllers\Api\V1\GrupoController;
 use App\Http\Controllers\Api\V1\HorarioController;
 use App\Http\Controllers\Api\V1\InscripcionController;
@@ -154,6 +155,9 @@ Route::prefix('v1')->group(function () {
             // CU-21/22: Evaluaciones y notas
             // evaluaciones/todas DEBE ir antes de evaluaciones/{id}/...
             Route::get('evaluaciones/todas',                    [EvaluacionController::class, 'todas']);
+
+            // Admisión: resumen de cupos por carrera (Reportes Analíticos)
+            Route::get('admision/resumen-cupos', [AdmisionController::class, 'resumenCupos']);
             Route::get('evaluaciones',                           [EvaluacionController::class, 'index']);
             Route::post('evaluaciones',                          [EvaluacionController::class, 'store']);
             Route::put('evaluaciones/{id}/detalles',             [EvaluacionController::class, 'guardarDetalles']);

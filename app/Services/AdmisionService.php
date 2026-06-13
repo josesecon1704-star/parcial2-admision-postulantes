@@ -58,6 +58,12 @@ class AdmisionService
      *     'txt_carrera_admitida'=> string|null,
      *   ]
      */
+    /** Cupos totales por id_carrera, calculados en la última llamada a calcularResultados(). */
+    private ?Collection $ultimosCupos = null;
+
+    /** Cupos usados por id_carrera, calculados en la última llamada a calcularResultados(). */
+    private ?array $ultimosCuposUsados = null;
+
     public function calcularResultados(): Collection
     {
         // 1. Cupos por carrera: id_carrera => int_cupo
@@ -139,7 +145,40 @@ class AdmisionService
             ]);
         }
 
+        // Cachear para que resumenCupos() pueda exponerlos sin
+        // recalcular todo de nuevo.
+        $this->ultimosCupos = $cupos;
+        $this->ultimosCuposUsados = $cuposUsados;
+
         return $resultados;
+    }
+
+    /**
+     * Devuelve un resumen de cupos por carrera: total, usados y
+     * disponibles, tras ejecutar (o reutilizar) calcularResultados().
+     *
+     * @return Collection<int, array{id_carrera:int, txt_nombre:string, usado:int, total:int, disponible:int, lleno:bool}>
+     */
+    public function resumenCupos(): Collection
+    {
+        if ($this->ultimosCupos === null || $this->ultimosCuposUsados === null) {
+            $this->calcularResultados();
+        }
+
+        return \App\Models\Carrera::orderBy('id_carrera')->get()
+            ->map(function ($carrera) {
+                $total = $this->ultimosCupos->get($carrera->id_carrera, 0);
+                $usado = $this->ultimosCuposUsados[$carrera->id_carrera] ?? 0;
+
+                return [
+                    'id_carrera'  => $carrera->id_carrera,
+                    'txt_nombre'  => $carrera->txt_nombre,
+                    'usado'       => $usado,
+                    'total'       => $total,
+                    'disponible'  => max(0, $total - $usado),
+                    'lleno'       => $usado >= $total,
+                ];
+            });
     }
 
     /**
