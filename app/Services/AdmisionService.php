@@ -194,8 +194,13 @@ class AdmisionService
 
     /**
      * Determina si el postulante está APROBADO (12 notas completas,
-     * todas >= 60) y calcula su nota_final (promedio de los 4
-     * num_promedio_materia).
+     * todas >= 60) y calcula su nota_final (promedio general de las
+     * 12 notas, equivalente al promedio de los 4 num_promedio_materia).
+     *
+     * nota_final se calcula SIEMPRE que existan las 12 notas
+     * completas, sin importar si todas son >= 60 — así, los
+     * reprobados también muestran su promedio general (solo
+     * 'aprobado' determina si entran al ranking de admisión).
      *
      * @return array{0: bool, 1: float|null} [aprobado, nota_final]
      */
@@ -215,25 +220,21 @@ class AdmisionService
             }
         }
 
-        // Todas las 12 notas individuales deben ser >= 60
         $todasLasNotas = $evaluaciones->flatMap(fn($ev) => $ev->detalles->pluck('num_nota'));
 
         if ($todasLasNotas->count() !== 12) {
             return [false, null];
         }
 
-        $todasAprueban = $todasLasNotas->every(fn($nota) => (float) $nota >= 60);
-
-        if (! $todasAprueban) {
-            return [false, null];
-        }
-
-        // nota_final = promedio de los 4 num_promedio_materia
-        // (cada uno = promedio de las 3 notas de esa materia en los
-        // 3 exámenes). Equivale al promedio general de las 12 notas.
+        // nota_final = promedio general de las 12 notas (= promedio
+        // de los 4 num_promedio_materia). Se calcula siempre, sin
+        // importar si aprueba o no.
         $notaFinal = round($todasLasNotas->sum() / 12, 2);
 
-        return [true, $notaFinal];
+        // Aprobado = TODAS las 12 notas individuales >= 60
+        $aprobado = $todasLasNotas->every(fn($nota) => (float) $nota >= 60);
+
+        return [$aprobado, $notaFinal];
     }
 
     /**
