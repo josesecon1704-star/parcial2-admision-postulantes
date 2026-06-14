@@ -1,9 +1,5 @@
 <?php
 
-// ============================================================
-// DESTINO: routes/api.php  — CICLO 1 + PORTAL DEL POSTULANTE
-// ============================================================
-
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AulaController;
 use App\Http\Controllers\Api\V1\CarreraController;
@@ -123,13 +119,7 @@ Route::prefix('v1')->group(function () {
             Route::post('grupos/{id}/horarios',        [GrupoController::class, 'asignarHorario']);
         });
 
-        // ── Solo DOCENTE ────────────────────────────────────
-        // IMPORTANTE: este grupo debe registrarse ANTES de
-        // apiResource('docentes', ...) más abajo. Ese apiResource
-        // crea la ruta GET /docentes/{docente}, que de lo contrario
-        // capturaría /docentes/me y /docentes/mi-carga como si
-        // {docente}='me' / 'mi-carga' (y luego CheckRole evaluaría
-        // los roles ADMINISTRADOR,SECRETARIA en vez de DOCENTE).
+        
         Route::middleware('role:DOCENTE')->group(function () {
             // CU-13: Carga horaria propia
             Route::get('docentes/mi-carga', [DocenteController::class, 'miCarga']);

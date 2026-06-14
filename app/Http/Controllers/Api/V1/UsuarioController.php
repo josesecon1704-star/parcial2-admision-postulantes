@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/UsuarioController.php
-//
 // CU-04: Gestionar usuarios
 //   GET    /api/v1/usuarios            → index   (listar)
 //   POST   /api/v1/usuarios            → store   (crear)

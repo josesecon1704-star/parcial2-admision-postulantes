@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/PostulanteSelfController.php
-// (archivo NUEVO)
-//
 // Portal de autoservicio del postulante (postulante.blade.php).
 // Protegido por middleware('role:POSTULANTE').
 //

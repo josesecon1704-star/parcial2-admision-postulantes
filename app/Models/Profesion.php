@@ -1,6 +1,5 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Profesion.php
 use Illuminate\Database\Eloquent\Model;
 class Profesion extends Model
 {

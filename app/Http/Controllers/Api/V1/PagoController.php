@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/PagoController.php
-// (archivo NUEVO)
-//
 // Endpoints para iniciar el pago de matrícula (Stripe Checkout)
 // y consultar su estado al volver de Stripe.
 //

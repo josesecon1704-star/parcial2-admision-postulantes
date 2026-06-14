@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/AuthController.php
-//
-// CAMBIOS:
 //   - login() ahora distingue 'administrativo' vs 'postulante'
 //     según lo que devuelva AuthService::login().
 //     El frontend (login.blade.php) usa 'data.tipo' para decidir

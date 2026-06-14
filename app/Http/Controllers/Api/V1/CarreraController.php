@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-// ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/CarreraController.php
-// ============================================================
 
 use App\Http\Controllers\Controller;
 use App\Models\Carrera;

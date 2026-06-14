@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-// ============================================================
-// DESTINO TEMPORAL: app/Http/Controllers/Api/V1/DiagnosticoController.php
-// (BORRAR este archivo y sus rutas una vez resuelto el problema)
-// ============================================================
 
 use App\Http\Controllers\Controller;
 use App\Models\Postulante;

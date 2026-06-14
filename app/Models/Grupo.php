@@ -1,6 +1,6 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Grupo.php
+
 // Tabla: tbl_grupo
 // Columnas: id_grupo | txt_nombre | int_cantidad_estudiantes |
 //           int_capacidad_maxma | id_inscripcion

@@ -3,8 +3,6 @@
 namespace App\Models;
 
 // ============================================================
-// DESTINO: app/Models/Requisito.php
-//
 // Tabla real: tbl_requisito
 // Columnas:   id_requisito | txt_descripcion_requisito
 //

@@ -3,9 +3,6 @@
 namespace App\Services;
 
 // ============================================================
-// DESTINO: app/Services/AdmisionService.php
-// (archivo NUEVO)
-//
 // Calcula EN TIEMPO REAL (sin persistir en BD) el resultado de
 // admisión de cada postulante:
 //

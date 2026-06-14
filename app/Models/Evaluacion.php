@@ -1,6 +1,5 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Evaluacion.php
 // Tabla: tbl_evaluacion
 // Columnas: id_evaluacion | int_nro_examen | fch_examen | id_postulante
 // Regla: Solo 3 exámenes por postulante (int_nro_examen: 1, 2 o 3)

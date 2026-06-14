@@ -3,8 +3,6 @@
 namespace App\Models;
 
 // ============================================================
-// DESTINO: app/Models/Inscripcion.php
-//
 // Tabla real: tbl_inscripcion
 // Columnas:
 //   id_inscripcion | fch_inscripcion | txt_estado_inscripcion |

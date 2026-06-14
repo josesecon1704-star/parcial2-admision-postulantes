@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// DESTINO: app/Models/InscripcionCarrera.php
 // Tabla pivote: tbl_inscripcion_carrera
 use Illuminate\Database\Eloquent\Model;
 

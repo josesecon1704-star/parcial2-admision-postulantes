@@ -1,6 +1,5 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Contratacion.php
 // Tabla: tbl_contratacion
 // Columnas: id_contratacion | fch_contrato | num_salario |
 //           txt_estado | txt_observacion | id_docente | id_usuario

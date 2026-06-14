@@ -2,19 +2,9 @@
 
 namespace App\Services;
 
-// DESTINO: app/Services/AuthService.php  (REEMPLAZAR)
-//
-// REDISEÑO DEL LOGIN DE POSTULANTE:
 //   - Personal administrativo (tbl_usuario) sigue usando
 //     tymon/jwt-auth + guard 'api' (Authenticatable real), sin cambios.
-//   - Postulante (tbl_postulante) YA NO usa JWTAuth::fromUser() ni
-//     ningún guard de Laravel. Se genera un JWT propio, simple,
-//     firmado con la misma JWT_SECRET, usando lcobucci/jwt
-//     directamente (ya viene como dependencia de tymon/jwt-auth).
-//
-//     Esto evita por completo los guards/providers/blacklist de
-//     tymon, que causaban "User not found" al re-autenticar el
-//     mismo token más de una vez en el ciclo de la request.
+//   - Postulante (tbl_postulante)
 //
 //   El token de postulante lleva los claims:
 //     sub  = id_postulante

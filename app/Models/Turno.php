@@ -1,6 +1,5 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Turno.php
 // Tabla: tbl_turno — id_turno | txt_turno
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;

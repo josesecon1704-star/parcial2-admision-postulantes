@@ -1,6 +1,5 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/DetalleEvaluacion.php
 // Tabla: tbl_detalle_evaluacion
 // PK compuesta: (id_evaluacion, id_materia)
 // IMPORTANTE: num_promedio_materia es GENERATED ALWAYS (columna calculada en PostgreSQL)

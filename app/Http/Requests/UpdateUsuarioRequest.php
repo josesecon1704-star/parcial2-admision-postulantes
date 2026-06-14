@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 // ============================================================
-// DESTINO: app/Http/Requests/UpdateUsuarioRequest.php
 // Valida la edición de un usuario existente (CU-04)
 // Usa Rule::ignore para el unique del usuario que se edita
 // ============================================================

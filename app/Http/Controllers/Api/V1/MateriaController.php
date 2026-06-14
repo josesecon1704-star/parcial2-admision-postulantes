@@ -2,7 +2,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/MateriaController.php
 // CU-15: Gestionar materias
 // Regla de negocio: exactamente 4 materias del examen FICCT
 //   Computación | Matemáticas | Inglés | Física

@@ -2,7 +2,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/HorarioController.php
 // CU-17: Gestionar horarios
 // Tabla: tbl_horario — txt_dia_semana | tm_hora_inicio | tm_hora_final | id_turno
 // CHECK en PostgreSQL: tm_hora_final > tm_hora_inicio

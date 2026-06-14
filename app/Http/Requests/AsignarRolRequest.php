@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 // ============================================================
-// DESTINO: app/Http/Requests/AsignarRolRequest.php
 // Valida el cambio de rol de un usuario (CU-05)
 // ============================================================
 

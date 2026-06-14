@@ -1,6 +1,5 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Materia.php
 // Tabla: tbl_materia — id_materia | txt_nombre
 // UNIQUE: txt_nombre
 // Regla de negocio: exactamente 4 materias

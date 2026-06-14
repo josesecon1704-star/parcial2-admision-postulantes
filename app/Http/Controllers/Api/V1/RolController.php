@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/RolController.php
-//
 // CU-05: Asignar roles
 //   GET   /api/v1/roles              → index       (listar roles)
 //   GET   /api/v1/roles/{id}         → show        (ver rol)

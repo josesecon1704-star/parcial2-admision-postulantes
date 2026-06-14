@@ -1,6 +1,6 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Aula.php
+
 // Tabla: tbl_aula — id_aula | int_piso | txt_nro_aula
 // UNIQUE: (int_piso, txt_nro_aula)
 use Illuminate\Database\Eloquent\Model;

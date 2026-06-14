@@ -2,8 +2,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/GrupoController.php
-//
 // CU-14: Calcular cantidad de grupos (CEIL(inscritos/80))
 //         — el trigger T3 lo hace automáticamente en PostgreSQL
 //         — este endpoint lo consulta/muestra

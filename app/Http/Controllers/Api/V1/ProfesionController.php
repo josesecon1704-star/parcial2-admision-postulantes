@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-// ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/ProfesionController.php
-// ============================================================
-
 use App\Http\Controllers\Controller;
 use App\Models\Profesion;
 use Illuminate\Http\JsonResponse;

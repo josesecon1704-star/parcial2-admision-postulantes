@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-// DESTINO: app/Http/Requests/LoginRequest.php
+
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;

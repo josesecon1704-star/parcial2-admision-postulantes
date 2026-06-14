@@ -3,8 +3,6 @@
 namespace App\Models;
 
 // ============================================================
-// DESTINO: app/Models/Postulante.php  (REEMPLAZAR el anterior)
-//
 // Tabla real: tbl_postulante
 // Columnas:
 //   id_postulante | txt_ci | txt_nombre | txt_telefono |

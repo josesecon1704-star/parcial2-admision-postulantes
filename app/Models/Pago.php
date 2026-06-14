@@ -1,6 +1,5 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Pago.php
 // Tabla: tbl_pago
 // UNIQUE: id_inscripcion (máximo 1 pago por inscripción)
 use Illuminate\Database\Eloquent\Model;

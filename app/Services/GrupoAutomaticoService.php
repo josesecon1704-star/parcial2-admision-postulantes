@@ -3,23 +3,8 @@
 namespace App\Services;
 
 // ============================================================
-// DESTINO: app/Services/GrupoAutomaticoService.php
-// (archivo NUEVO)
-//
 // Crea un grupo nuevo cuando, al registrarse un postulante, no
 // existe ningún grupo con cupo en el turno elegido.
-//
-// El grupo nuevo se crea con:
-//   - txt_nombre = "Grupo {N}" (N = MAX(id_grupo)+1)
-//   - tbl_grupo_horario: 20 filas (5 días x 4 bloques del turno),
-//     reusando la primera aula sin conflicto de horario, o
-//     creando una aula nueva si ninguna califica.
-//   - tbl_asignacion_docente: 4 filas (Computación, Matemáticas,
-//     Inglés, Física, en ese orden — mismo orden usado por
-//     PostulanteSelfController/DocenteController para emparejar
-//     bloque-horario <-> materia). Para cada materia se busca un
-//     docente con <4 grupos asignados; si ninguno califica, se usa
-//     un docente placeholder "Docente Pendiente de Asignación".
 // ============================================================
 
 use App\Models\AsignacionDocente;

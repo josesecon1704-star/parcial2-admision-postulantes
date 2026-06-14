@@ -3,8 +3,6 @@
 namespace App\Http\Requests;
 
 // ============================================================
-// DESTINO: app/Http/Requests/StorePostulanteRequest.php
-//
 // Reglas del examen:
 //   - No permitir CI duplicado     → uq_postulante_ci
 //   - Validar correo electrónico   → uq_postulante_correo

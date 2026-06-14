@@ -3,8 +3,6 @@
 namespace App\Http\Requests;
 
 // ============================================================
-// DESTINO: app/Http/Requests/UpdatePostulanteRequest.php
-//
 // CU-07: Modificar datos del postulante
 // Usa Rule::ignore para no chocar con sus propios únicos (CI/correo)
 // ============================================================
