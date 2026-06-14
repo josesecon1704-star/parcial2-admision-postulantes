@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Models;
-// DESTINO: app/Models/Docente.php
 // Tabla: tbl_docente
 // Columnas: id_docente | txt_ci | txt_nombre | txt_telefono | txt_correo
 // UNIQUE: txt_ci, txt_correo

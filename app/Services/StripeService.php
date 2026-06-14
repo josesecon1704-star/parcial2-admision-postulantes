@@ -3,9 +3,6 @@
 namespace App\Services;
 
 // ============================================================
-// DESTINO: app/Services/StripeService.php
-// (archivo NUEVO)
-//
 // Encapsula la integración con Stripe Checkout (pago único,
 // modo 'payment') para la matrícula de admisión (Bs 350 fijo,
 // cobrado en USD ya que Stripe no soporta BOB / cuentas en Bolivia).
@@ -15,8 +12,6 @@ namespace App\Services;
 //   STRIPE_WEBHOOK_SECRET=whsec_...
 //   STRIPE_CURRENCY=usd
 //   MATRICULA_USD=10.00   (equivalente aprox. a Bs 350)
-//
-// Requiere el paquete: composer require stripe/stripe-php
 // ============================================================
 
 use App\Models\Pago;

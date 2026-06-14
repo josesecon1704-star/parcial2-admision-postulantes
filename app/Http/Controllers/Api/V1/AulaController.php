@@ -2,7 +2,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/AulaController.php
 // CU-16: Gestionar aulas
 // GET    /api/v1/aulas        → index
 // POST   /api/v1/aulas        → store

@@ -3,8 +3,6 @@
 namespace App\Http\Middleware;
 
 // ============================================================
-// DESTINO: app/Http/Middleware/JwtMiddleware.php
-//
 // Versión simplificada: SOLO personal administrativo
 // (ADMINISTRADOR / SECRETARIA / DOCENTE) vía guard 'api' (tbl_usuario).
 //

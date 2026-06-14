@@ -113,11 +113,6 @@ class PostulanteService
     /**
      * Formatear un postulante para la respuesta JSON.
      *
-     * IMPORTANTE: usa $postulante->inscripciones (la colección YA
-     * cargada por listar() vía with()), NO
-     * $postulante->inscripciones()->with(...)->first(), que
-     * dispararía una query nueva POR CADA postulante (N+1).
-     *
      * @param array|null $resultadoAdmision Resultado precalculado por
      *        AdmisionService::calcularResultados() para este postulante
      *        (nota_final, txt_resultado, txt_carrera_admitida, etc.).

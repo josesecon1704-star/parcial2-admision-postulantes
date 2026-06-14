@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/PostulanteController.php
-//
 // CU-06  POST   /api/v1/postulantes          → store   (registrar)
 // CU-07  PUT    /api/v1/postulantes/{id}      → update  (modificar)
 // CU-08  DELETE /api/v1/postulantes/{id}      → destroy (eliminar)

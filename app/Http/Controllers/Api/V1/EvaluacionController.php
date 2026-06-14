@@ -25,9 +25,7 @@ class EvaluacionController extends Controller
     // una sola consulta, agrupadas por id_postulante. Usado por
     // "Reportes Analíticos" (Por Materia / Promedios) para evitar
     // hacer un fetch individual por cada postulante (N+1).
-    //
-    // Respuesta:
-    //   { success: true, data: { [id_postulante]: [ {int_nro_examen, detalles:[...]}, ... ] } }
+
     public function todas(): JsonResponse
     {
         $evaluaciones = Evaluacion::with(['detalles'])

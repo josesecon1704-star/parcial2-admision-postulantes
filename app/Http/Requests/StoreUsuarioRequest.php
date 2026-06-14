@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 // ============================================================
-// DESTINO: app/Http/Requests/StoreUsuarioRequest.php
 // Valida la creación de un nuevo usuario (CU-04)
 // ============================================================
 

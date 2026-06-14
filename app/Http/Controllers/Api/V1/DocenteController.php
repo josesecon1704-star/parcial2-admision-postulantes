@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/DocenteController.php
 // CU-12: Registrar docente (con profesiones y formaciones)
 // CU-13: Consultar carga horaria del docente autenticado
 // ============================================================

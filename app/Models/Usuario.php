@@ -3,8 +3,6 @@
 namespace App\Models;
 
 // ============================================================
-// DESTINO: app/Models/Usuario.php  (nuevo archivo, no reemplaza User.php)
-//
 // Mapea exactamente la tabla tbl_usuario de tu PostgreSQL:
 //   id_usuario | txt_username | txt_password | txt_email |
 //   bol_estado | fch_ultimo_acceso | fch_creacion |

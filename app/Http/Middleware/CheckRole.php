@@ -2,21 +2,6 @@
 
 namespace App\Http\Middleware;
 
-// DESTINO: app/Http/Middleware/CheckRole.php
-//
-// IMPORTANTE: el alias 'jwt.auth' es sobreescrito por
-// Tymon\JWTAuth\Providers\LaravelServiceProvider para apuntar a
-// Tymon\JWTAuth\Http\Middleware\Authenticate (esto ocurre DESPUÉS
-// de bootstrap/app.php y no se puede evitar fácilmente). Por lo
-// tanto, NUESTRO App\Http\Middleware\JwtMiddleware NUNCA se
-// ejecuta en las rutas de personal administrativo, y
-// $request->attributes 'auth_sujeto' nunca queda seteado por él.
-//
-// Tymon\Authenticate SÍ deja al guard 'api' autenticado
-// correctamente (auth('api')->user() funciona). Por eso CheckRole
-// resuelve el usuario directamente desde el guard, como en la
-// versión original — sin depender de auth_sujeto.
-//
 // Uso en rutas:
 //   ->middleware('role:ADMINISTRADOR')
 //   ->middleware('role:ADMINISTRADOR,SECRETARIA')

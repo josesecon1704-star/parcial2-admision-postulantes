@@ -3,18 +3,11 @@
 namespace App\Http\Middleware;
 
 // ============================================================
-// DESTINO: app/Http/Middleware/PostulanteJwtMiddleware.php
-// (archivo NUEVO)
-//
 // Middleware exclusivo para el portal del postulante.
 // NO usa guards de Laravel ni tymon/jwt-auth para autenticar —
 // decodifica el JWT manualmente con AuthService::validarTokenPostulante()
 // (lcobucci/jwt directo) y busca el postulante por su PK.
-//
-// Esto evita por completo los problemas de "User not found" que
-// ocurrían al re-autenticar el mismo token más de una vez con
-// guards JWT de Laravel.
-//
+
 // Deja el postulante autenticado en:
 //   $request->attributes->get('auth_sujeto')  → instancia de Postulante
 //   $request->attributes->get('auth_tipo')    → 'postulante'

@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/PublicController.php
-// (archivo NUEVO)
-//
 // Endpoints PÚBLICOS (sin autenticación) para:
 //   - registroPostulante.blade.php
 //   - modal "Olvidé mi contraseña" en login.blade.php

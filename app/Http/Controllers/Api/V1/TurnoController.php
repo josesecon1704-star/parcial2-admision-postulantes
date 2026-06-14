@@ -2,7 +2,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/TurnoController.php
 // CU-17 parcial — catálogo de turnos (Mañana, Tarde, Noche)
 // GET  /api/v1/turnos       → index
 // POST /api/v1/turnos       → store

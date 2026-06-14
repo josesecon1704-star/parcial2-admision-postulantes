@@ -1,6 +1,6 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/AsignacionDocente.php
+
 // Tabla: tbl_asignacion_docente
 // Columnas: id_asignacion | id_docente | id_materia | id_grupo
 // UNIQUE: (id_grupo, id_materia)

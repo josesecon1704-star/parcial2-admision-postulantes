@@ -1,14 +1,5 @@
 <?php
 
-// DESTINO: config/auth.php  (REEMPLAZAR el existente completamente)
-//
-// CAMBIOS:
-//   - Se agrega el guard 'api_postulante' (driver jwt) con su propio
-//     provider 'postulantes' -> App\Models\Postulante.
-//   - El guard 'api' (Usuario) sigue siendo el default para personal
-//     administrativo.
-//   - JwtMiddleware/CheckRole eligen el guard correcto según el claim
-//     'tipo' del token ('postulante' -> api_postulante, resto -> api).
 
 return [
 

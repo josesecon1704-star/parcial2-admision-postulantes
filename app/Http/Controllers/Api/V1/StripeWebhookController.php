@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/StripeWebhookController.php
-// (archivo NUEVO)
-//
 // POST /api/v1/stripe/webhook
 // SIN autenticación, SIN CSRF (debe excluirse en bootstrap/app.php
 // o estar en routes/api.php que ya está fuera de CSRF por defecto).
@@ -14,11 +11,6 @@ namespace App\Http\Controllers\Api\V1;
 // 'checkout.session.completed', marca el Pago correspondiente
 // como APROBADO. Esta es la ÚNICA fuente de verdad real del pago
 // (el frontend solo muestra un estado provisional vía PagoController::estado).
-//
-// Configuración en el Dashboard de Stripe:
-//   Developers → Webhooks → Add endpoint
-//   URL: https://tu-dominio.up.railway.app/api/v1/stripe/webhook
-//   Evento a escuchar: checkout.session.completed
 // ============================================================
 
 use App\Http\Controllers\Controller;

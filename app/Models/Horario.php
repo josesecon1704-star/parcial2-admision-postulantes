@@ -1,6 +1,5 @@
 <?php
 namespace App\Models;
-// DESTINO: app/Models/Horario.php
 // Tabla: tbl_horario
 // Columnas: id_horario | txt_dia_semana | tm_hora_inicio | tm_hora_final | id_turno
 // CHECK: tm_hora_final > tm_hora_inicio  (en PostgreSQL)

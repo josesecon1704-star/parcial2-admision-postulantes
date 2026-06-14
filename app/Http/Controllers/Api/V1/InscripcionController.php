@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 // ============================================================
-// DESTINO: app/Http/Controllers/Api/V1/InscripcionController.php
 // CU-11: Validar inscripción
 //
 // IMPORTANTE — Triggers activos en PostgreSQL:

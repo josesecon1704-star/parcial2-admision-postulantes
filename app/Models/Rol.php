@@ -3,8 +3,6 @@
 namespace App\Models;
 
 // ============================================================
-// DESTINO: app/Models/Rol.php
-//
 // Mapea exactamente la tabla tbl_rol de tu PostgreSQL:
 //   id_rol | txt_nombre | txt_descripcion | fch_creacion
 // ============================================================
